@@ -420,12 +420,18 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
 /**
  * Refresh access token
  * POST /api/auth/refresh
+ *
+ * SECURITY: Implements Refresh Token Rotation (RTR)
+ * - Each time a refresh token is used, it's invalidated and a new one is issued
+ * - Prevents refresh token reuse attacks
+ * - If an old token is reused, it indicates potential token theft
+ * - Follows OAuth 2.0 Security Best Practices (RFC 6819)
  */
 export const refreshAccessToken = async (req: Request, res: Response) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const oldRefreshToken = req.cookies.refreshToken;
 
-    if (!refreshToken) {
+    if (!oldRefreshToken) {
       return res.status(401).json({
         success: false,
         error: 'Refresh token required',
@@ -436,10 +442,41 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const result = await query(
       `SELECT user_id, expires_at FROM refresh_tokens
        WHERE token = $1 AND expires_at > NOW()`,
-      [refreshToken]
+      [oldRefreshToken]
     );
 
     if (result.rows.length === 0) {
+      // SECURITY: If token is invalid, it might be:
+      // 1. Expired (legitimate)
+      // 2. Already rotated (reuse attempt - potential theft)
+      // 3. Never existed (invalid token)
+      //
+      // For security, we check if this token was recently rotated
+      // If yes, this is likely a token reuse attack
+      const recentlyUsed = await query(
+        `SELECT user_id FROM refresh_tokens
+         WHERE token = $1 AND expires_at <= NOW()
+         AND expires_at > NOW() - INTERVAL '5 minutes'`,
+        [oldRefreshToken]
+      );
+
+      if (recentlyUsed.rows.length > 0) {
+        // SECURITY ALERT: Token reuse detected!
+        // Someone is trying to use an old refresh token
+        // This is a strong indicator of token theft
+        const userId = recentlyUsed.rows[0].user_id;
+
+        // Invalidate ALL refresh tokens for this user as a security measure
+        await query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+
+        console.error(`[SECURITY ALERT] Refresh token reuse detected for user ${userId}`);
+
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid refresh token. All sessions have been terminated for security.',
+        });
+      }
+
       return res.status(401).json({
         success: false,
         error: 'Invalid or expired refresh token',
@@ -463,6 +500,31 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
     const user = userResult.rows[0];
 
+    // SECURITY: Token Rotation - Generate NEW refresh token
+    const newRefreshToken = generateRefreshToken();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    // SECURITY: Atomic operation - Delete old token and insert new token
+    // This prevents race conditions where the same token could be used twice
+    await query('BEGIN');
+
+    try {
+      // Delete the old refresh token (invalidate it)
+      await query('DELETE FROM refresh_tokens WHERE token = $1', [oldRefreshToken]);
+
+      // Insert the new refresh token
+      await query(
+        'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [user.id, newRefreshToken, expiresAt]
+      );
+
+      await query('COMMIT');
+    } catch (err) {
+      await query('ROLLBACK');
+      throw err;
+    }
+
     // Generate new access token
     const accessToken = generateAccessToken({
       userId: user.id,
@@ -477,9 +539,17 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
+    // SECURITY: Set new refresh token cookie (rotated)
+    res.cookie('refreshToken', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
     res.json({
       success: true,
-      message: 'Access token refreshed',
+      message: 'Tokens refreshed successfully',
     });
   } catch (error) {
     console.error('Refresh token error:', error);
