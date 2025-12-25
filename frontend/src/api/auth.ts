@@ -105,6 +105,69 @@ export const authApi = {
     const response = await api.post('/auth/reset-password', { token, newPassword });
     return response.data;
   },
+
+  // Complete login with 2FA
+  completeLoginWith2FA: async (
+    userId: number,
+    token: string,
+    useBackupCode: boolean = false
+  ): Promise<ApiResponse<{ user: User }>> => {
+    const response = await api.post('/auth/login/2fa', { userId, token, useBackupCode });
+    return response.data;
+  },
+
+  // Change password (for logged-in users)
+  changePassword: async (
+    currentPassword: string,
+    newPassword: string,
+    logoutOtherDevices: boolean = false
+  ): Promise<ApiResponse> => {
+    const response = await api.post('/auth/change-password', {
+      currentPassword,
+      newPassword,
+      logoutOtherDevices,
+    });
+    return response.data;
+  },
+};
+
+// 2FA API
+export const twoFactorApi = {
+  // Setup 2FA - Get QR code
+  setup: async (): Promise<ApiResponse<{ secret: string; qrCodeUrl: string; otpauthUrl: string }>> => {
+    const response = await api.post('/auth/2fa/setup');
+    return response.data;
+  },
+
+  // Enable 2FA
+  enable: async (
+    token: string,
+    password: string
+  ): Promise<ApiResponse<{ backupCodes: string[]; warning: string }>> => {
+    const response = await api.post('/auth/2fa/enable', { token, password });
+    return response.data;
+  },
+
+  // Disable 2FA
+  disable: async (password: string, token: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/2fa/disable', { password, token });
+    return response.data;
+  },
+
+  // Get 2FA status
+  getStatus: async (): Promise<ApiResponse<{ enabled: boolean; backupCodesCount: number }>> => {
+    const response = await api.get('/auth/2fa/status');
+    return response.data;
+  },
+
+  // Regenerate backup codes
+  regenerateBackupCodes: async (
+    password: string,
+    token: string
+  ): Promise<ApiResponse<{ backupCodes: string[]; warning: string }>> => {
+    const response = await api.post('/auth/2fa/regenerate-backup-codes', { password, token });
+    return response.data;
+  },
 };
 
 // Response interceptor to handle errors

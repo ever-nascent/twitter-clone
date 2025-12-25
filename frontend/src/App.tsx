@@ -10,6 +10,8 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminPage from './pages/AdminPage';
+import TwoFactorVerifyPage from './pages/TwoFactorVerifyPage';
+import SecuritySettingsPage from './pages/SecuritySettingsPage';
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -135,6 +137,15 @@ function App() {
           }
         />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/verify-2fa" element={<TwoFactorVerifyPage />} />
+        <Route
+          path="/security"
+          element={
+            <ProtectedRoute>
+              <SecuritySettingsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin"
           element={

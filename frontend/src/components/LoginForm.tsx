@@ -42,9 +42,16 @@ export default function LoginForm() {
         captchaToken,
       });
 
-      if (response.success && response.data) {
-        setUser(response.data.user);
-        navigate('/');
+      if (response.success) {
+        // Check if 2FA is required
+        if ((response as any).requiresTwoFactor) {
+          // Redirect to 2FA verification page with userId
+          navigate('/verify-2fa', { state: { userId: (response as any).userId } });
+        } else if (response.data) {
+          // Normal login - set user and redirect
+          setUser(response.data.user);
+          navigate('/');
+        }
       } else {
         setError(response.error || 'Login failed');
       }
