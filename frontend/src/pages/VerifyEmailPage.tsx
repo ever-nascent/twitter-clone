@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../utils/errors';
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
@@ -31,8 +32,8 @@ export default function VerifyEmailPage() {
         } else {
           setError(response.error || 'Failed to verify email');
         }
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Failed to verify email. The link may have expired.');
+      } catch (err: unknown) {
+        setError(getErrorMessage(err, 'Failed to verify email. The link may have expired.'));
       } finally {
         setIsVerifying(false);
       }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../utils/errors';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../api/auth';
@@ -63,8 +64,8 @@ export default function ResetPasswordPage() {
       } else {
         setError(response.error || 'Failed to reset password');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to reset password. Please try again.'));
     } finally {
       setIsLoading(false);
     }

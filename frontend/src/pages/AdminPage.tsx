@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminApi, User, UserStats } from '../api/admin';
 import { sanitizeText } from '../utils/sanitize';
+import { getErrorMessage } from '../utils/errors';
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -52,8 +53,8 @@ export default function AdminPage() {
         setUsers(response.data.users);
         setTotalPages(response.data.pagination.totalPages);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to load users');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load users'));
     } finally {
       setLoading(false);
     }
@@ -81,8 +82,8 @@ export default function AdminPage() {
         setSuccess('Account unlocked successfully');
         loadUsers();
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to unlock account');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to unlock account'));
     }
   };
 
@@ -97,8 +98,8 @@ export default function AdminPage() {
         setSuccess('Email verified successfully');
         loadUsers();
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to verify email');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to verify email'));
     }
   };
 
@@ -114,8 +115,8 @@ export default function AdminPage() {
         loadUsers();
         setSelectedUser(null);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to delete user'));
     }
   };
 
@@ -147,8 +148,8 @@ export default function AdminPage() {
         setSelectedUser(null);
         loadUsers();
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to update user'));
     }
   };
 
@@ -188,8 +189,8 @@ export default function AdminPage() {
         setNewPassword('');
         setConfirmPassword('');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to reset password');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to reset password'));
     }
   };
 

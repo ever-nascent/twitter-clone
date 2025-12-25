@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
-import { AuthRequest } from '../types';
+import { AuthRequest, User } from '../types';
 import { hashPassword, maskEmail } from '../utils/auth';
 
 /**
@@ -17,7 +17,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
 
     let whereClause = '';
-    let params: any[] = [];
+    let params: unknown[] = [];
 
     if (search) {
       whereClause = 'WHERE username ILIKE $1 OR email ILIKE $1 OR display_name ILIKE $1';
@@ -46,7 +46,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
     // SECURITY: Mask emails in list view for GDPR/CCPA compliance
     // Admins don't need to see full emails in list view - only in detail view
-    const maskedUsers = usersResult.rows.map((user: any) => ({
+    const maskedUsers = usersResult.rows.map((user: User) => ({
       ...user,
       email: maskEmail(user.email),
     }));
@@ -174,7 +174,7 @@ export const updateUser = async (req: Request, res: Response) => {
 
     // Build update query dynamically
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramCount = 1;
 
     if (username !== undefined) {

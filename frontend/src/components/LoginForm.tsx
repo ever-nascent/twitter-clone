@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { LoginFormData } from '../types';
+import { getErrorMessage } from '../utils/errors';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -39,8 +40,8 @@ export default function LoginForm() {
       } else {
         setError(response.error || 'Login failed');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from '../utils/errors';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authApi } from '../api/auth';
@@ -21,8 +22,8 @@ export default function ForgotPasswordPage() {
       } else {
         setError(response.error || 'Failed to send reset email');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to send reset email. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to send reset email. Please try again.'));
     } finally {
       setIsLoading(false);
     }

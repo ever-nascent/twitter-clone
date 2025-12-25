@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { RegisterFormData } from '../types';
+import { getErrorMessage } from '../utils/errors';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
@@ -41,8 +42,8 @@ export default function RegisterForm() {
       } else {
         setError(response.error || 'Registration failed');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setIsLoading(false);
     }
