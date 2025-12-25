@@ -1,40 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { adminApi, User, UserStats } from '../api/admin';
 import { sanitizeText } from '../utils/sanitize';
 import { getErrorMessage } from '../utils/errors';
+import { useAdminState } from '../hooks/useAdminState';
 
 export default function AdminPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [editMode, setEditMode] = useState(false);
-  const [editData, setEditData] = useState<Partial<User>>({});
-  const [resetPasswordMode, setResetPasswordMode] = useState(false);
-  const [resetPasswordUser, setResetPasswordUser] = useState<{ id: number; username: string } | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordValidation, setPasswordValidation] = useState({
-    minLength: false,
-    hasUppercase: false,
-    hasLowercase: false,
-    hasNumber: false,
-    hasSpecialChar: false,
-    passwordsMatch: false,
-  });
+  const { state, actions } = useAdminState();
+  const {
+    users,
+    stats,
+    search,
+    page,
+    totalPages,
+    loading,
+    error,
+    success,
+    selectedUser,
+    editMode,
+    editData,
+    resetPasswordMode,
+    resetPasswordUser,
+    newPassword,
+    confirmPassword,
+    passwordValidation,
+  } = state;
 
   useEffect(() => {
     loadUsers();
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search]);
 
   useEffect(() => {
-    setPasswordValidation({
+    actions.updatePasswordValidation({
       minLength: newPassword.length >= 8,
       hasUppercase: /[A-Z]/.test(newPassword),
       hasLowercase: /[a-z]/.test(newPassword),
@@ -42,21 +40,21 @@ export default function AdminPage() {
       hasSpecialChar: /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(newPassword),
       passwordsMatch: newPassword.length > 0 && newPassword === confirmPassword,
     });
-  }, [newPassword, confirmPassword]);
+  }, [newPassword, confirmPassword, actions]);
 
   const loadUsers = async () => {
     try {
-      setLoading(true);
-      setError('');
+      actions.setLoading(true);
+      actions.setError('');
       const response = await adminApi.getUsers(page, 20, search);
       if (response.success && response.data) {
-        setUsers(response.data.users);
-        setTotalPages(response.data.pagination.totalPages);
+        actions.setUsers(response.data.users);
+        actions.setTotalPages(response.data.pagination.totalPages);
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to load users'));
+      actions.setError(getErrorMessage(err, 'Failed to load users'));
     } finally {
-      setLoading(false);
+      actions.setLoading(false);
     }
   };
 
@@ -64,7 +62,7 @@ export default function AdminPage() {
     try {
       const response = await adminApi.getStats();
       if (response.success && response.data) {
-        setStats(response.data.stats);
+        actions.setStats(response.data.stats);
       }
     } catch (err) {
       console.error('Failed to load stats:', err);
@@ -75,15 +73,15 @@ export default function AdminPage() {
     if (!confirm('Are you sure you want to unlock this account?')) return;
 
     try {
-      setError('');
-      setSuccess('');
+      actions.setError('');
+      actions.setSuccess('');
       const response = await adminApi.unlockUser(id);
       if (response.success) {
-        setSuccess('Account unlocked successfully');
+        actions.setSuccess('Account unlocked successfully');
         loadUsers();
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to unlock account'));
+      actions.setError(getErrorMessage(err, 'Failed to unlock account'));
     }
   };
 
@@ -91,15 +89,15 @@ export default function AdminPage() {
     if (!confirm('Are you sure you want to verify this email?')) return;
 
     try {
-      setError('');
-      setSuccess('');
+      actions.setError('');
+      actions.setSuccess('');
       const response = await adminApi.verifyEmail(id);
       if (response.success) {
-        setSuccess('Email verified successfully');
+        actions.setSuccess('Email verified successfully');
         loadUsers();
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to verify email'));
+      actions.setError(getErrorMessage(err, 'Failed to verify email'));
     }
   };
 
@@ -107,59 +105,48 @@ export default function AdminPage() {
     if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return;
 
     try {
-      setError('');
-      setSuccess('');
+      actions.setError('');
+      actions.setSuccess('');
       const response = await adminApi.deleteUser(id);
       if (response.success) {
-        setSuccess('User deleted successfully');
+        actions.setSuccess('User deleted successfully');
         loadUsers();
-        setSelectedUser(null);
+        actions.closeEditMode();
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to delete user'));
+      actions.setError(getErrorMessage(err, 'Failed to delete user'));
     }
   };
 
   const handleEdit = (user: User) => {
-    setSelectedUser(user);
-    setEditMode(true);
-    setEditData({
-      username: user.username,
-      email: user.email,
-      display_name: user.display_name,
-      bio: user.bio,
-      location: user.location,
-      website: user.website,
-      verified: user.verified,
-      email_verified: user.email_verified,
-    });
+    actions.openEditMode(user);
   };
 
   const handleSaveEdit = async () => {
     if (!selectedUser) return;
 
     try {
-      setError('');
-      setSuccess('');
+      actions.setError('');
+      actions.setSuccess('');
       const response = await adminApi.updateUser(selectedUser.id, editData);
       if (response.success) {
-        setSuccess('User updated successfully');
-        setEditMode(false);
-        setSelectedUser(null);
+        actions.setSuccess('User updated successfully');
+
+        actions.closeEditMode();
         loadUsers();
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to update user'));
+      actions.setError(getErrorMessage(err, 'Failed to update user'));
     }
   };
 
   const handleResetPassword = (id: number, username: string) => {
-    setResetPasswordUser({ id, username });
-    setResetPasswordMode(true);
-    setNewPassword('');
-    setConfirmPassword('');
-    setError('');
-    setSuccess('');
+    actions.openResetPassword({ id, username });
+    
+    actions.setNewPassword('');
+    actions.setConfirmPassword('');
+    actions.setError('');
+    actions.setSuccess('');
   };
 
   const handleSubmitPasswordReset = async () => {
@@ -174,23 +161,23 @@ export default function AdminPage() {
       passwordValidation.passwordsMatch;
 
     if (!isValid) {
-      setError('Please ensure all password requirements are met');
+      actions.setError('Please ensure all password requirements are met');
       return;
     }
 
     try {
-      setError('');
-      setSuccess('');
+      actions.setError('');
+      actions.setSuccess('');
       const response = await adminApi.resetPassword(resetPasswordUser.id, newPassword);
       if (response.success) {
-        setSuccess(`Password reset successfully for user "${resetPasswordUser.username}"`);
-        setResetPasswordMode(false);
-        setResetPasswordUser(null);
-        setNewPassword('');
-        setConfirmPassword('');
+        actions.setSuccess(`Password reset successfully for user "${resetPasswordUser.username}"`);
+        actions.closeResetPassword();
+        
+        actions.setNewPassword('');
+        actions.setConfirmPassword('');
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to reset password'));
+      actions.setError(getErrorMessage(err, 'Failed to reset password'));
     }
   };
 
@@ -248,8 +235,8 @@ export default function AdminPage() {
             placeholder="Search users by username, email, or display name..."
             value={search}
             onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
+              actions.setSearch(e.target.value);
+              actions.setPage(1);
             }}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -394,14 +381,14 @@ export default function AdminPage() {
             <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
-                  onClick={() => setPage(Math.max(1, page - 1))}
+                  onClick={() => actions.setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  onClick={() => actions.setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
                   className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -418,14 +405,14 @@ export default function AdminPage() {
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                     <button
-                      onClick={() => setPage(Math.max(1, page - 1))}
+                      onClick={() => actions.setPage(Math.max(1, page - 1))}
                       disabled={page === 1}
                       className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
                       Previous
                     </button>
                     <button
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      onClick={() => actions.setPage(Math.min(totalPages, page + 1))}
                       disabled={page === totalPages}
                       className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -543,8 +530,8 @@ export default function AdminPage() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => {
-                    setEditMode(false);
-                    setSelectedUser(null);
+
+                    actions.closeEditMode();
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
@@ -578,7 +565,7 @@ export default function AdminPage() {
                   <input
                     type="password"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => actions.setNewPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Enter new password"
                     autoFocus
@@ -592,7 +579,7 @@ export default function AdminPage() {
                   <input
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => actions.setConfirmPassword(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Confirm new password"
                   />
@@ -627,10 +614,10 @@ export default function AdminPage() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => {
-                    setResetPasswordMode(false);
-                    setResetPasswordUser(null);
-                    setNewPassword('');
-                    setConfirmPassword('');
+                    actions.closeResetPassword();
+                    
+                    actions.setNewPassword('');
+                    actions.setConfirmPassword('');
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
