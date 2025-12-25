@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ApiResponse } from '../types';
+import { getCsrfToken } from './auth';
 
 const api = axios.create({
   baseURL: '/api/admin',
@@ -8,6 +9,23 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Request interceptor to add CSRF token to all state-changing requests
+api.interceptors.request.use(
+  (config) => {
+    const csrfToken = getCsrfToken();
+    // Add CSRF token to POST, PUT, DELETE, PATCH requests
+    if (
+      csrfToken &&
+      config.method &&
+      ['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())
+    ) {
+      config.headers['x-csrf-token'] = csrfToken;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export interface User {
   id: number;

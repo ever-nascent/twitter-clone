@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { fetchCsrfToken } from './api/auth';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -74,9 +75,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
-  // Check authentication on mount
+  // Initialize CSRF token and check authentication on mount
   useEffect(() => {
-    checkAuth();
+    // Fetch CSRF token first, then check auth
+    // This ensures CSRF token is available for any auth-related requests
+    const initialize = async () => {
+      await fetchCsrfToken();
+      checkAuth();
+    };
+
+    initialize();
   }, [checkAuth]);
 
   return (

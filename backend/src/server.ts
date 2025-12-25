@@ -8,6 +8,7 @@ import { pool } from './config/database';
 import { connectRedis } from './config/redis';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
+import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 
 // Load environment variables
 dotenv.config();
@@ -36,6 +37,10 @@ app.use(cookieParser());
 // Logging middleware
 app.use(morgan('dev'));
 
+// CSRF token endpoint (GET request - no CSRF protection needed)
+// Frontend should call this on app initialization to get CSRF token
+app.get('/api/csrf-token', generateCsrfToken);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -56,6 +61,9 @@ app.use((req, res) => {
     error: 'Route not found',
   });
 });
+
+// CSRF error handler (must be before general error handler)
+app.use(csrfErrorHandler);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
