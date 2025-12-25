@@ -15,10 +15,14 @@ import { doubleCsrf } from 'csrf-csrf';
 
 // Configure CSRF protection
 const {
-  generateToken, // Generates CSRF token
   doubleCsrfProtection, // Middleware to validate CSRF token
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'your-csrf-secret-change-in-production',
+  getSessionIdentifier: (req: Request) => {
+    // Return empty string for stateless CSRF (double-submit cookie pattern)
+    // For session-based CSRF, return the session ID here
+    return '';
+  },
   cookieName: 'x-csrf-token',
   cookieOptions: {
     httpOnly: true,
@@ -28,7 +32,7 @@ const {
   },
   size: 64, // Token size in bytes
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'], // Methods that don't need CSRF protection
-  getTokenFromRequest: (req) => {
+  getCsrfTokenFromRequest: (req: Request) => {
     // Check multiple sources for CSRF token
     return (
       req.headers['x-csrf-token'] as string ||
@@ -42,9 +46,21 @@ const {
 /**
  * Middleware to generate and send CSRF token to client
  * Use this on a GET endpoint that the frontend calls on app load
+ * Note: In csrf-csrf v4+, generateToken is not directly exported
+ * Use req.csrfToken() method added by the middleware instead
  */
-export const generateCsrfToken = (req: Request, res: Response) => {
-  const token = generateToken(req, res);
+export const generateCsrfToken = (req: Request & { csrfToken?: () => string }, res: Response) => {
+  // The doubleCsrfProtection middleware adds csrfToken() method to req
+  // If middleware hasn't run yet, we can't generate a token
+  const token = req.csrfToken ? req.csrfToken() : null;
+
+  if (!token) {
+    return res.status(500).json({
+      success: false,
+      error: 'CSRF token generation failed',
+    });
+  }
+
   res.json({
     success: true,
     csrfToken: token,
