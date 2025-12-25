@@ -13,11 +13,32 @@ export default function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Partial<User>>({});
+  const [resetPasswordMode, setResetPasswordMode] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<{ id: number; username: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    passwordsMatch: false,
+  });
 
   useEffect(() => {
     loadUsers();
     loadStats();
   }, [page, search]);
+
+  useEffect(() => {
+    setPasswordValidation({
+      minLength: newPassword.length >= 8,
+      hasUppercase: /[A-Z]/.test(newPassword),
+      hasLowercase: /[a-z]/.test(newPassword),
+      hasNumber: /[0-9]/.test(newPassword),
+      passwordsMatch: newPassword.length > 0 && newPassword === confirmPassword,
+    });
+  }, [newPassword, confirmPassword]);
 
   const loadUsers = async () => {
     try {
@@ -128,21 +149,40 @@ export default function AdminPage() {
     }
   };
 
-  const handleResetPassword = async (id: number, username: string) => {
-    const newPassword = prompt(`Enter new password for user "${username}" (min 8 characters):`);
-    if (!newPassword) return;
+  const handleResetPassword = (id: number, username: string) => {
+    setResetPasswordUser({ id, username });
+    setResetPasswordMode(true);
+    setNewPassword('');
+    setConfirmPassword('');
+    setError('');
+    setSuccess('');
+  };
 
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
+  const handleSubmitPasswordReset = async () => {
+    if (!resetPasswordUser) return;
+
+    const isValid =
+      passwordValidation.minLength &&
+      passwordValidation.hasUppercase &&
+      passwordValidation.hasLowercase &&
+      passwordValidation.hasNumber &&
+      passwordValidation.passwordsMatch;
+
+    if (!isValid) {
+      setError('Please ensure all password requirements are met');
       return;
     }
 
     try {
       setError('');
       setSuccess('');
-      const response = await adminApi.resetPassword(id, newPassword);
+      const response = await adminApi.resetPassword(resetPasswordUser.id, newPassword);
       if (response.success) {
-        setSuccess('Password reset successfully');
+        setSuccess(`Password reset successfully for user "${resetPasswordUser.username}"`);
+        setResetPasswordMode(false);
+        setResetPasswordUser(null);
+        setNewPassword('');
+        setConfirmPassword('');
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to reset password');
@@ -504,6 +544,96 @@ export default function AdminPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Password Reset Modal */}
+        {resetPasswordMode && resetPasswordUser && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-4">Reset Password</h2>
+              <p className="text-gray-600 mb-4">
+                Setting new password for user: <span className="font-semibold">{resetPasswordUser.username}</span>
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Enter new password"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+
+                {/* Password Requirements */}
+                <div className="bg-gray-50 p-3 rounded-md">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                  <ul className="space-y-1 text-sm">
+                    <li className={passwordValidation.minLength ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.minLength ? '✓' : '○'} At least 8 characters
+                    </li>
+                    <li className={passwordValidation.hasUppercase ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.hasUppercase ? '✓' : '○'} Contains uppercase letter
+                    </li>
+                    <li className={passwordValidation.hasLowercase ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.hasLowercase ? '✓' : '○'} Contains lowercase letter
+                    </li>
+                    <li className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.hasNumber ? '✓' : '○'} Contains number
+                    </li>
+                    <li className={passwordValidation.passwordsMatch ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.passwordsMatch ? '✓' : '○'} Passwords match
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setResetPasswordMode(false);
+                    setResetPasswordUser(null);
+                    setNewPassword('');
+                    setConfirmPassword('');
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitPasswordReset}
+                  disabled={
+                    !passwordValidation.minLength ||
+                    !passwordValidation.hasUppercase ||
+                    !passwordValidation.hasLowercase ||
+                    !passwordValidation.hasNumber ||
+                    !passwordValidation.passwordsMatch
+                  }
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Reset Password
                 </button>
               </div>
             </div>
