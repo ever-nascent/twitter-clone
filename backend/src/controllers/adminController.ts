@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { AuthRequest, User } from '../types';
 import { hashPassword, maskEmail } from '../utils/auth';
+import { logAudit, AuditAction } from '../utils/audit';
 
 /**
  * Get all users with pagination and search
@@ -122,7 +123,7 @@ export const getUserById = async (req: Request, res: Response) => {
  * Update user
  * PUT /api/admin/users/:id
  */
-export const updateUser = async (req: Request, res: Response) => {
+export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const {
@@ -228,9 +229,28 @@ export const updateUser = async (req: Request, res: Response) => {
       values
     );
 
+    const updatedUser = result.rows[0];
+
+    // AUDIT LOG: Record user update
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_UPDATE,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: updatedUser.username,
+        details: {
+          updated_fields: Object.keys(req.body),
+          changes: req.body,
+        },
+      },
+      req
+    );
+
     res.json({
       success: true,
-      data: { user: result.rows[0] },
+      data: { user: updatedUser },
       message: 'User updated successfully',
     });
   } catch (error) {
@@ -246,15 +266,32 @@ export const updateUser = async (req: Request, res: Response) => {
  * Unlock user account
  * POST /api/admin/users/:id/unlock
  */
-export const unlockUser = async (req: Request, res: Response) => {
+export const unlockUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Get user info before unlock for audit log
+    const userResult = await query('SELECT username FROM users WHERE id = $1', [id]);
+    const targetUsername = userResult.rows[0]?.username || 'unknown';
 
     await query(
       `UPDATE users
       SET failed_login_attempts = 0, locked_until = NULL
       WHERE id = $1`,
       [id]
+    );
+
+    // AUDIT LOG: Record account unlock
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_UNLOCK,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: targetUsername,
+      },
+      req
     );
 
     res.json({
@@ -274,9 +311,13 @@ export const unlockUser = async (req: Request, res: Response) => {
  * Verify user email manually
  * POST /api/admin/users/:id/verify-email
  */
-export const verifyUserEmail = async (req: Request, res: Response) => {
+export const verifyUserEmail = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Get user info before verification for audit log
+    const userResult = await query('SELECT username, email FROM users WHERE id = $1', [id]);
+    const targetUser = userResult.rows[0];
 
     await query(
       `UPDATE users
@@ -285,6 +326,22 @@ export const verifyUserEmail = async (req: Request, res: Response) => {
           email_verification_expires = NULL
       WHERE id = $1`,
       [id]
+    );
+
+    // AUDIT LOG: Record email verification
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_EMAIL_VERIFY,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: targetUser?.username || 'unknown',
+        details: {
+          email: targetUser?.email,
+        },
+      },
+      req
     );
 
     res.json({
@@ -304,18 +361,38 @@ export const verifyUserEmail = async (req: Request, res: Response) => {
  * Delete user
  * DELETE /api/admin/users/:id
  */
-export const deleteUser = async (req: Request, res: Response) => {
+export const deleteUser = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
-
-    if (result.rows.length === 0) {
+    // Get user info before deletion for audit log
+    const userResult = await query('SELECT username, email FROM users WHERE id = $1', [id]);
+    if (userResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'User not found',
       });
     }
+    const deletedUser = userResult.rows[0];
+
+    const result = await query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+
+    // AUDIT LOG: Record user deletion (CRITICAL - must be logged)
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_DELETE,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: deletedUser.username,
+        details: {
+          deleted_email: deletedUser.email,
+          deleted_username: deletedUser.username,
+        },
+      },
+      req
+    );
 
     res.json({
       success: true,
@@ -364,7 +441,7 @@ export const getStats = async (req: Request, res: Response) => {
  * Reset user password (admin)
  * POST /api/admin/users/:id/reset-password
  */
-export const resetUserPassword = async (req: Request, res: Response) => {
+export const resetUserPassword = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { newPassword } = req.body;
@@ -375,6 +452,10 @@ export const resetUserPassword = async (req: Request, res: Response) => {
         error: 'Password must be at least 8 characters',
       });
     }
+
+    // Get user info before password reset for audit log
+    const userResult = await query('SELECT username FROM users WHERE id = $1', [id]);
+    const targetUsername = userResult.rows[0]?.username || 'unknown';
 
     const passwordHash = await hashPassword(newPassword);
 
@@ -391,6 +472,23 @@ export const resetUserPassword = async (req: Request, res: Response) => {
 
     // Invalidate all refresh tokens
     await query('DELETE FROM refresh_tokens WHERE user_id = $1', [id]);
+
+    // AUDIT LOG: Record password reset (CRITICAL - security-sensitive action)
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_PASSWORD_RESET,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: targetUsername,
+        details: {
+          sessions_invalidated: true,
+          account_unlocked: true,
+        },
+      },
+      req
+    );
 
     res.json({
       success: true,
