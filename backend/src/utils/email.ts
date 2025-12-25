@@ -385,3 +385,222 @@ export const sendAccountLockedEmail = async (
     console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
   }
 };
+
+/**
+ * Send new device login alert
+ */
+export const sendNewDeviceAlert = async (
+  email: string,
+  username: string,
+  deviceInfo: string,
+  ipAddress: string,
+  location: string | null,
+  loginTime: Date
+): Promise<void> => {
+  const transporter = await createTransporter();
+
+  const mailOptions = {
+    from: EMAIL_FROM,
+    to: email,
+    subject: 'New Device Login Detected',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #ff9800; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+            .alert-box { background-color: #fff3cd; border-left: 4px solid #ff9800; padding: 15px; margin: 20px 0; }
+            .device-info { background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #ff9800; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>New Device Login Alert</h2>
+            </div>
+            <div class="content">
+              <p>Hi ${username},</p>
+              <div class="alert-box">
+                <strong>⚠️ We detected a login from a new device</strong>
+              </div>
+              <p>A login to your account was detected from a device we haven't seen before:</p>
+              <div class="device-info">
+                <p><strong>Device:</strong> ${deviceInfo}</p>
+                <p><strong>IP Address:</strong> ${ipAddress}</p>
+                ${location ? `<p><strong>Location:</strong> ${location}</p>` : ''}
+                <p><strong>Time:</strong> ${loginTime.toLocaleString()}</p>
+              </div>
+              <p><strong>Was this you?</strong></p>
+              <p>If you recognize this login, you can safely ignore this email.</p>
+              <p>If you don't recognize this activity:</p>
+              <ul>
+                <li>Change your password immediately</li>
+                <li>Review your active sessions and log out from unrecognized devices</li>
+                <li>Enable two-factor authentication if you haven't already</li>
+              </ul>
+              <p>
+                <a href="${FRONTEND_URL}/security" class="button">Review Security Settings</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p>This is an automated security alert. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+      Hi ${username},
+
+      NEW DEVICE LOGIN ALERT
+
+      We detected a login from a device we haven't seen before:
+
+      Device: ${deviceInfo}
+      IP Address: ${ipAddress}
+      ${location ? `Location: ${location}` : ''}
+      Time: ${loginTime.toLocaleString()}
+
+      Was this you?
+
+      If you recognize this login, you can safely ignore this email.
+
+      If you don't recognize this activity:
+      - Change your password immediately
+      - Review your active sessions and log out from unrecognized devices
+      - Enable two-factor authentication if you haven't already
+
+      Review your security settings: ${FRONTEND_URL}/security
+    `,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+  }
+};
+
+/**
+ * Send suspicious login attempt alert
+ */
+export const sendSuspiciousLoginAlert = async (
+  email: string,
+  username: string,
+  reason: string,
+  ipAddress: string,
+  attemptTime: Date
+): Promise<void> => {
+  const transporter = await createTransporter();
+
+  const mailOptions = {
+    from: EMAIL_FROM,
+    to: email,
+    subject: 'Suspicious Login Attempt Detected',
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #dc3545; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+            .alert-box { background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }
+            .button { display: inline-block; padding: 12px 24px; background-color: #dc3545; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>🚨 Suspicious Login Attempt</h2>
+            </div>
+            <div class="content">
+              <p>Hi ${username},</p>
+              <div class="alert-box">
+                <strong>We detected suspicious activity on your account</strong>
+              </div>
+              <p>Details of the suspicious attempt:</p>
+              <ul>
+                <li><strong>Reason:</strong> ${reason}</li>
+                <li><strong>IP Address:</strong> ${ipAddress}</li>
+                <li><strong>Time:</strong> ${attemptTime.toLocaleString()}</li>
+              </ul>
+              <p><strong>Immediate action required:</strong></p>
+              <ol>
+                <li>Review your recent login activity</li>
+                <li>Change your password if you don't recognize this attempt</li>
+                <li>Enable two-factor authentication for added security</li>
+                <li>Log out from all devices you don't recognize</li>
+              </ol>
+              <p>
+                <a href="${FRONTEND_URL}/security" class="button">Secure My Account</a>
+              </p>
+            </div>
+            <div class="footer">
+              <p>This is an automated security alert. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `
+      Hi ${username},
+
+      SUSPICIOUS LOGIN ATTEMPT DETECTED
+
+      We detected suspicious activity on your account.
+
+      Details:
+      - Reason: ${reason}
+      - IP Address: ${ipAddress}
+      - Time: ${attemptTime.toLocaleString()}
+
+      IMMEDIATE ACTION REQUIRED:
+      1. Review your recent login activity
+      2. Change your password if you don't recognize this attempt
+      3. Enable two-factor authentication for added security
+      4. Log out from all devices you don't recognize
+
+      Secure your account: ${FRONTEND_URL}/security
+    `,
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+  }
+};
+
+/**
+ * Generic email sending function (for 2FA codes, etc.)
+ */
+export const sendEmail = async (
+  to: string,
+  subject: string,
+  html: string,
+  text?: string
+): Promise<void> => {
+  const transporter = await createTransporter();
+
+  const mailOptions = {
+    from: EMAIL_FROM,
+    to,
+    subject,
+    html,
+    text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML if no text provided
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+  }
+};
