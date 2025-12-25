@@ -28,9 +28,11 @@ export interface RegisterFormData {
   email: string;
   password: string;
   displayName?: string;
+  captchaToken?: string;
 }
 
 export interface LoginFormData {
   email: string;
   password: string;
+  captchaToken?: string;
 }

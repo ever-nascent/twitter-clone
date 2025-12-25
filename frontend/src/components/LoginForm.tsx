@@ -4,6 +4,7 @@ import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { LoginFormData } from '../types';
 import { getErrorMessage } from '../utils/errors';
+import { executeRecaptcha } from '../utils/captcha';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -32,7 +33,14 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      const response = await authApi.login(formData);
+      // Execute reCAPTCHA
+      const captchaToken = await executeRecaptcha('login');
+
+      // Submit login with CAPTCHA token
+      const response = await authApi.login({
+        ...formData,
+        captchaToken,
+      });
 
       if (response.success && response.data) {
         setUser(response.data.user);

@@ -6,6 +6,7 @@ import {
   comparePassword,
   generateAccessToken,
   generateRefreshToken,
+  hashRefreshToken,
   validatePassword,
   validateUsername,
   validateEmail,
@@ -16,6 +17,8 @@ import {
   sendPasswordResetEmail,
   sendAccountLockedEmail,
 } from '../utils/email';
+import { verifyCaptcha } from '../utils/captcha';
+import { verifyTOTP, verifyBackupCode } from '../utils/twoFactor';
 
 /**
  * Remove sensitive data from user object
@@ -35,7 +38,19 @@ const sanitizeUser = (user: User): PublicUser => {
  */
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, displayName }: RegisterRequest = req.body;
+    const { username, email, password, displayName, captchaToken }: RegisterRequest & { captchaToken?: string } = req.body;
+
+    // SECURITY: Verify CAPTCHA first (bot protection)
+    // Skip in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      const captchaResult = await verifyCaptcha(captchaToken || '', 'register');
+      if (!captchaResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'CAPTCHA verification failed. Please try again.',
+        });
+      }
+    }
 
     // Validate input
     if (!username || !email || !password) {
@@ -131,18 +146,18 @@ export const register = async (req: Request, res: Response) => {
       username: user.username,
     });
 
-    const refreshToken = generateRefreshToken();
+    const { token: refreshToken, hashedToken: hashedRefreshToken } = generateRefreshToken();
 
-    // Store refresh token in database
+    // Store HASHED refresh token in database (security best practice)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
 
     await query(
       'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [user.id, refreshToken, expiresAt]
+      [user.id, hashedRefreshToken, expiresAt]
     );
 
-    // Set cookies
+    // Set cookies with raw token (client needs the raw token)
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -181,7 +196,19 @@ export const register = async (req: Request, res: Response) => {
  */
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password }: LoginRequest = req.body;
+    const { email, password, captchaToken }: LoginRequest & { captchaToken?: string } = req.body;
+
+    // SECURITY: Verify CAPTCHA first (bot protection)
+    // Skip in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      const captchaResult = await verifyCaptcha(captchaToken || '', 'login');
+      if (!captchaResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: 'CAPTCHA verification failed. Please try again.',
+        });
+      }
+    }
 
     // Validate input
     if (!email || !password) {
@@ -284,6 +311,25 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    // Check if 2FA is enabled
+    if (user.two_factor_enabled) {
+      // Don't issue tokens yet - require 2FA verification first
+      // Reset failed attempts since password was correct
+      if (user.failed_login_attempts > 0) {
+        await query(
+          'UPDATE users SET failed_login_attempts = 0 WHERE id = $1',
+          [user.id]
+        );
+      }
+
+      return res.status(200).json({
+        success: true,
+        requiresTwoFactor: true,
+        userId: user.id, // Needed for 2FA verification
+        message: 'Please enter your 2FA code',
+      });
+    }
+
     // Reset failed login attempts on successful login
     if (user.failed_login_attempts > 0) {
       await query(
@@ -298,18 +344,18 @@ export const login = async (req: Request, res: Response) => {
       username: user.username,
     });
 
-    const refreshToken = generateRefreshToken();
+    const { token: refreshToken, hashedToken: hashedRefreshToken } = generateRefreshToken();
 
-    // Store refresh token in database
+    // Store HASHED refresh token in database (security best practice)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
 
     await query(
       'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [user.id, refreshToken, expiresAt]
+      [user.id, hashedRefreshToken, expiresAt]
     );
 
-    // Set cookies
+    // Set cookies with raw token (client needs the raw token)
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -350,9 +396,10 @@ export const logout = async (req: AuthRequest, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
-    // Delete refresh token from database
+    // Delete refresh token from database (hash it first to match stored value)
     if (refreshToken) {
-      await query('DELETE FROM refresh_tokens WHERE token = $1', [refreshToken]);
+      const hashedToken = hashRefreshToken(refreshToken);
+      await query('DELETE FROM refresh_tokens WHERE token = $1', [hashedToken]);
     }
 
     // Clear cookies
@@ -440,11 +487,14 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       });
     }
 
+    // Hash the incoming token to compare with database
+    const hashedOldToken = hashRefreshToken(oldRefreshToken);
+
     // Verify refresh token exists and is not expired
     const result = await query(
       `SELECT user_id, expires_at FROM refresh_tokens
        WHERE token = $1 AND expires_at > NOW()`,
-      [oldRefreshToken]
+      [hashedOldToken]
     );
 
     if (result.rows.length === 0) {
@@ -459,7 +509,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         `SELECT user_id FROM refresh_tokens
          WHERE token = $1 AND expires_at <= NOW()
          AND expires_at > NOW() - INTERVAL '5 minutes'`,
-        [oldRefreshToken]
+        [hashedOldToken]
       );
 
       if (recentlyUsed.rows.length > 0) {
@@ -503,7 +553,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     const user = userResult.rows[0];
 
     // SECURITY: Token Rotation - Generate NEW refresh token
-    const newRefreshToken = generateRefreshToken();
+    const { token: newRefreshToken, hashedToken: newHashedRefreshToken } = generateRefreshToken();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
 
@@ -512,13 +562,13 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     await query('BEGIN');
 
     try {
-      // Delete the old refresh token (invalidate it)
-      await query('DELETE FROM refresh_tokens WHERE token = $1', [oldRefreshToken]);
+      // Delete the old refresh token (invalidate it) - compare with hashed version
+      await query('DELETE FROM refresh_tokens WHERE token = $1', [hashedOldToken]);
 
-      // Insert the new refresh token
+      // Insert the new HASHED refresh token
       await query(
         'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-        [user.id, newRefreshToken, expiresAt]
+        [user.id, newHashedRefreshToken, expiresAt]
       );
 
       await query('COMMIT');
@@ -829,6 +879,246 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to reset password',
+    });
+  }
+};
+
+/**
+ * Complete login with 2FA verification
+ * POST /api/auth/login/2fa
+ *
+ * Called after successful email/password login when user has 2FA enabled
+ * Verifies 2FA code and issues tokens
+ */
+export const completeLoginWith2FA = async (req: Request, res: Response) => {
+  try {
+    const { userId, token, useBackupCode } = req.body;
+
+    if (!userId || !token) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID and 2FA code are required',
+      });
+    }
+
+    // Get user data
+    const result = await query(
+      `SELECT id, username, two_factor_enabled, two_factor_secret, two_factor_backup_codes
+       FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify 2FA is enabled
+    if (!user.two_factor_enabled) {
+      return res.status(400).json({
+        success: false,
+        error: '2FA is not enabled for this user',
+      });
+    }
+
+    let isValid = false;
+    let backupCodeUsed = false;
+
+    // Check if using backup code
+    if (useBackupCode) {
+      const backupCodes = user.two_factor_backup_codes || [];
+      const codeIndex = verifyBackupCode(token, backupCodes);
+
+      if (codeIndex !== -1) {
+        isValid = true;
+        backupCodeUsed = true;
+
+        // Remove used backup code
+        const updatedCodes = backupCodes.filter((_: string, index: number) => index !== codeIndex);
+        await query('UPDATE users SET two_factor_backup_codes = $1 WHERE id = $2', [
+          updatedCodes,
+          user.id,
+        ]);
+      }
+    } else {
+      // Verify TOTP code
+      isValid = verifyTOTP(user.two_factor_secret, token);
+    }
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: useBackupCode ? 'Invalid backup code' : 'Invalid 2FA code',
+      });
+    }
+
+    // Issue tokens (same as regular login)
+    const accessToken = generateAccessToken({
+      userId: user.id,
+      username: user.username,
+    });
+
+    const { token: refreshToken, hashedToken: hashedRefreshToken } = generateRefreshToken();
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
+
+    await query(
+      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, hashedRefreshToken, expiresAt]
+    );
+
+    // Set cookies
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 60 * 1000, // 30 minutes
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    // Get user data for response (without sensitive fields)
+    const userDataResult = await query(
+      `SELECT id, username, email, display_name, bio, location, website,
+              profile_image_url, banner_image_url, verified, is_admin, email_verified, created_at
+       FROM users WHERE id = $1`,
+      [user.id]
+    );
+
+    const userData = userDataResult.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        user: sanitizeUser(userData),
+        message: backupCodeUsed
+          ? 'Logged in with backup code. Consider regenerating backup codes.'
+          : 'Logged in successfully',
+      },
+    });
+  } catch (error) {
+    console.error('2FA login completion error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete login',
+    });
+  }
+};
+
+/**
+ * Change password for logged-in user
+ * POST /api/auth/change-password
+ *
+ * Requires:
+ * - currentPassword: User's current password
+ * - newPassword: New password
+ * - logoutOtherDevices: Optional boolean to invalidate all refresh tokens
+ */
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authenticated',
+      });
+    }
+
+    const { currentPassword, newPassword, logoutOtherDevices } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Current password and new password are required',
+      });
+    }
+
+    // Validate new password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({
+        success: false,
+        error: passwordError,
+      });
+    }
+
+    // Check if new password is same as current
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'New password must be different from current password',
+      });
+    }
+
+    // Get user with password hash
+    const result = await query(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify current password
+    const isPasswordValid = await comparePassword(currentPassword, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        error: 'Current password is incorrect',
+      });
+    }
+
+    // Hash new password
+    const passwordHash = await hashPassword(newPassword);
+
+    // Update password
+    await query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [passwordHash, req.user.userId]
+    );
+
+    // Optionally logout from other devices
+    if (logoutOtherDevices) {
+      const currentRefreshToken = req.cookies.refreshToken;
+      if (currentRefreshToken) {
+        // Delete all refresh tokens except current one
+        const hashedCurrentToken = hashRefreshToken(currentRefreshToken);
+        await query(
+          'DELETE FROM refresh_tokens WHERE user_id = $1 AND token != $2',
+          [req.user.userId, hashedCurrentToken]
+        );
+      } else {
+        // No current token, delete all
+        await query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.user.userId]);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: logoutOtherDevices
+        ? 'Password changed successfully. Other devices have been logged out.'
+        : 'Password changed successfully',
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to change password',
     });
   }
 };

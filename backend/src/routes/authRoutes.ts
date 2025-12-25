@@ -10,6 +10,8 @@ import {
   resendVerificationEmail,
   forgotPassword,
   resetPassword,
+  completeLoginWith2FA,
+  changePassword,
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 import { csrfProtection } from '../middleware/csrf';
@@ -48,6 +50,7 @@ const tokenLimiter = rateLimit({
 // Public routes - protected with CSRF
 router.post('/register', csrfProtection, authLimiter, register);
 router.post('/login', csrfProtection, authLimiter, login);
+router.post('/login/2fa', csrfProtection, authLimiter, completeLoginWith2FA);
 router.post('/refresh', csrfProtection, refreshAccessToken);
 
 // Email verification routes - protected with CSRF and rate limiting
@@ -61,5 +64,6 @@ router.post('/reset-password', csrfProtection, tokenLimiter, resetPassword);
 // Protected routes - protected with CSRF
 router.post('/logout', csrfProtection, authenticate, logout);
 router.get('/me', authenticate, getCurrentUser);
+router.post('/change-password', csrfProtection, authenticate, changePassword);
 
 export default router;

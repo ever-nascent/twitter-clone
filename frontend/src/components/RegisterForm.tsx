@@ -4,6 +4,7 @@ import { authApi } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 import { RegisterFormData } from '../types';
 import { getErrorMessage } from '../utils/errors';
+import { executeRecaptcha } from '../utils/captcha';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
@@ -34,7 +35,14 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      const response = await authApi.register(formData);
+      // Execute reCAPTCHA
+      const captchaToken = await executeRecaptcha('register');
+
+      // Submit registration with CAPTCHA token
+      const response = await authApi.register({
+        ...formData,
+        captchaToken,
+      });
 
       if (response.success && response.data) {
         setUser(response.data.user);

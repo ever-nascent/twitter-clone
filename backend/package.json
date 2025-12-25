@@ -31,8 +31,10 @@
     "morgan": "^1.10.0",
     "nodemailer": "^7.0.12",
     "pg": "^8.11.3",
+    "qrcode": "^1.5.4",
     "redis": "^4.6.11",
-    "socket.io": "^4.6.0"
+    "socket.io": "^4.6.0",
+    "speakeasy": "^2.0.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -44,6 +46,8 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.10.6",
     "@types/pg": "^8.10.9",
+    "@types/qrcode": "^1.5.6",
+    "@types/speakeasy": "^2.0.10",
     "@types/supertest": "^6.0.2",
     "cross-env": "^7.0.3",
     "jest": "^29.7.0",

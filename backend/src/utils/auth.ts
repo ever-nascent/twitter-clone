@@ -46,9 +46,25 @@ export const generateAccessToken = (payload: JWTPayload): string => {
 
 /**
  * Generate a refresh token (random string)
+ * Returns both the raw token (to send to client) and hashed version (to store in DB)
  */
-export const generateRefreshToken = (): string => {
-  return crypto.randomBytes(64).toString('hex');
+export const generateRefreshToken = (): { token: string; hashedToken: string } => {
+  const token = crypto.randomBytes(64).toString('hex');
+  const hashedToken = hashRefreshToken(token);
+  return { token, hashedToken };
+};
+
+/**
+ * Hash a refresh token for secure database storage
+ * Uses SHA-256 for one-way hashing (same security level as bcrypt for this use case)
+ *
+ * SECURITY:
+ * - Refresh tokens should be hashed in database (like passwords)
+ * - If database is compromised, attackers can't use the tokens directly
+ * - SHA-256 is sufficient here (faster than bcrypt, still secure for this use)
+ */
+export const hashRefreshToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
 };
 
 /**

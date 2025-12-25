@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { fetchCsrfToken } from './api/auth';
+import { useRecaptcha } from './hooks/useRecaptcha';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -74,6 +75,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
+
+  // Initialize reCAPTCHA
+  useRecaptcha();
 
   // Initialize CSRF token and check authentication on mount
   useEffect(() => {
