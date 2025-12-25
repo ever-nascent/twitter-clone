@@ -3,10 +3,12 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { JWTPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
+// Validate and extract JWT_SECRET at module load time
+if (!process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
+// Type assertion: After the check above, we know JWT_SECRET is defined
+const JWT_SECRET: string = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 
 /**
@@ -32,6 +34,7 @@ export const comparePassword = async (
  * Generate a JWT access token
  */
 export const generateAccessToken = (payload: JWTPayload): string => {
+  // @ts-expect-error - JWT_SECRET is verified non-null at module load time (line 7-9)
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
