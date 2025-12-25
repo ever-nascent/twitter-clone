@@ -10,6 +10,12 @@ import {
   validateUsername,
   validateEmail,
 } from '../utils/auth';
+import {
+  generateToken,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendAccountLockedEmail,
+} from '../utils/email';
 
 /**
  * Remove sensitive data from user object
@@ -91,16 +97,29 @@ export const register = async (req: Request, res: Response) => {
     // Hash password
     const passwordHash = await hashPassword(password);
 
+    // Generate email verification token
+    const verificationToken = generateToken();
+    const verificationExpires = new Date();
+    verificationExpires.setHours(verificationExpires.getHours() + 24); // 24 hours
+
     // Create user
     const result = await query(
-      `INSERT INTO users (username, email, password_hash, display_name)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO users (username, email, password_hash, display_name, email_verification_token, email_verification_expires)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, username, email, display_name, bio, location, website,
-                 profile_image_url, banner_image_url, verified, created_at`,
-      [username, email, passwordHash, displayName || username]
+                 profile_image_url, banner_image_url, verified, email_verified, created_at`,
+      [username, email, passwordHash, displayName || username, verificationToken, verificationExpires]
     );
 
     const user = result.rows[0] as User;
+
+    // Send verification email (don't block registration if email fails)
+    try {
+      await sendVerificationEmail(email, username, verificationToken);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Continue with registration even if email fails
+    }
 
     // Generate tokens
     const accessToken = generateAccessToken({
@@ -139,7 +158,8 @@ export const register = async (req: Request, res: Response) => {
       success: true,
       data: {
         user: sanitizeUser(user),
-        message: 'Account created successfully',
+        message: 'Account created successfully! Please check your email to verify your account.',
+        emailVerificationRequired: !user.email_verified,
       },
     });
   } catch (error) {
@@ -183,14 +203,87 @@ export const login = async (req: Request, res: Response) => {
 
     const user = result.rows[0] as User;
 
+    // Check if account is locked
+    if (user.locked_until && new Date() < new Date(user.locked_until)) {
+      return res.status(403).json({
+        success: false,
+        error: `Account is locked due to too many failed login attempts. Please try again later or reset your password.`,
+        lockedUntil: user.locked_until,
+      });
+    }
+
+    // If lock period has passed, reset failed attempts
+    if (user.locked_until && new Date() >= new Date(user.locked_until)) {
+      await query(
+        'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = $1',
+        [user.id]
+      );
+      user.failed_login_attempts = 0;
+      user.locked_until = null;
+    }
+
     // Compare passwords
     const isPasswordValid = await comparePassword(password, user.password_hash);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
+      // Increment failed login attempts
+      const newFailedAttempts = (user.failed_login_attempts || 0) + 1;
+      const maxAttempts = 5;
+
+      if (newFailedAttempts >= maxAttempts) {
+        // Lock account for 30 minutes
+        const lockUntil = new Date();
+        lockUntil.setMinutes(lockUntil.getMinutes() + 30);
+
+        await query(
+          'UPDATE users SET failed_login_attempts = $1, locked_until = $2 WHERE id = $3',
+          [newFailedAttempts, lockUntil, user.id]
+        );
+
+        // Send account locked email
+        try {
+          await sendAccountLockedEmail(user.email, user.username, lockUntil);
+        } catch (emailError) {
+          console.error('Failed to send account locked email:', emailError);
+        }
+
+        return res.status(403).json({
+          success: false,
+          error: 'Too many failed login attempts. Your account has been locked for 30 minutes.',
+          lockedUntil: lockUntil,
+        });
+      } else {
+        // Just increment the counter
+        await query(
+          'UPDATE users SET failed_login_attempts = $1 WHERE id = $2',
+          [newFailedAttempts, user.id]
+        );
+
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid email or password',
+          attemptsRemaining: maxAttempts - newFailedAttempts,
+        });
+      }
+    }
+
+    // Check if email is verified (optional - you can make this strict or just warn)
+    // For now, we'll allow login but include verification status
+    const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+    if (requireEmailVerification && !user.email_verified) {
+      return res.status(403).json({
         success: false,
-        error: 'Invalid email or password',
+        error: 'Please verify your email before logging in. Check your inbox for the verification link.',
+        emailVerificationRequired: true,
       });
+    }
+
+    // Reset failed login attempts on successful login
+    if (user.failed_login_attempts > 0) {
+      await query(
+        'UPDATE users SET failed_login_attempts = 0 WHERE id = $1',
+        [user.id]
+      );
     }
 
     // Generate tokens
@@ -231,6 +324,7 @@ export const login = async (req: Request, res: Response) => {
       data: {
         user: sanitizeUser(user),
         message: 'Logged in successfully',
+        emailVerified: user.email_verified,
       },
     });
   } catch (error) {
@@ -384,6 +478,277 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to refresh token',
+    });
+  }
+};
+
+/**
+ * Verify email address
+ * POST /api/auth/verify-email
+ */
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token is required',
+      });
+    }
+
+    // Find user with this token
+    const result = await query(
+      `SELECT id, username, email, email_verification_expires
+       FROM users
+       WHERE email_verification_token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired verification token',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Check if token has expired (24 hours)
+    if (new Date() > new Date(user.email_verification_expires)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token has expired. Please request a new one.',
+      });
+    }
+
+    // Update user as verified
+    await query(
+      `UPDATE users
+       SET email_verified = TRUE,
+           email_verification_token = NULL,
+           email_verification_expires = NULL
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully. You can now log in.',
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify email',
+    });
+  }
+};
+
+/**
+ * Resend verification email
+ * POST /api/auth/resend-verification
+ */
+export const resendVerificationEmail = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required',
+      });
+    }
+
+    // Find user by email
+    const result = await query(
+      'SELECT id, username, email, email_verified FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      // Don't reveal if email exists
+      return res.json({
+        success: true,
+        message: 'If that email is registered, a verification email has been sent.',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Check if already verified
+    if (user.email_verified) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is already verified',
+      });
+    }
+
+    // Generate new verification token
+    const verificationToken = generateToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours
+
+    // Update user with new token
+    await query(
+      `UPDATE users
+       SET email_verification_token = $1, email_verification_expires = $2
+       WHERE id = $3`,
+      [verificationToken, expiresAt, user.id]
+    );
+
+    // Send verification email
+    await sendVerificationEmail(user.email, user.username, verificationToken);
+
+    res.json({
+      success: true,
+      message: 'Verification email sent. Please check your inbox.',
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send verification email',
+    });
+  }
+};
+
+/**
+ * Request password reset
+ * POST /api/auth/forgot-password
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required',
+      });
+    }
+
+    // Find user by email
+    const result = await query(
+      'SELECT id, username, email FROM users WHERE email = $1',
+      [email]
+    );
+
+    // Don't reveal if email exists (security best practice)
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'If that email is registered, a password reset link has been sent.',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Generate reset token
+    const resetToken = generateToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour
+
+    // Store reset token
+    await query(
+      `UPDATE users
+       SET password_reset_token = $1, password_reset_expires = $2
+       WHERE id = $3`,
+      [resetToken, expiresAt, user.id]
+    );
+
+    // Send reset email
+    await sendPasswordResetEmail(user.email, user.username, resetToken);
+
+    res.json({
+      success: true,
+      message: 'If that email is registered, a password reset link has been sent.',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process password reset request',
+    });
+  }
+};
+
+/**
+ * Reset password with token
+ * POST /api/auth/reset-password
+ */
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Token and new password are required',
+      });
+    }
+
+    // Validate new password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return res.status(400).json({
+        success: false,
+        error: passwordError,
+      });
+    }
+
+    // Find user with this reset token
+    const result = await query(
+      `SELECT id, password_reset_expires
+       FROM users
+       WHERE password_reset_token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired reset token',
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Check if token has expired
+    if (new Date() > new Date(user.password_reset_expires)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Reset token has expired. Please request a new one.',
+      });
+    }
+
+    // Hash new password
+    const passwordHash = await hashPassword(newPassword);
+
+    // Update password and clear reset token, also reset failed attempts
+    await query(
+      `UPDATE users
+       SET password_hash = $1,
+           password_reset_token = NULL,
+           password_reset_expires = NULL,
+           failed_login_attempts = 0,
+           locked_until = NULL
+       WHERE id = $2`,
+      [passwordHash, user.id]
+    );
+
+    // Invalidate all refresh tokens for this user (force re-login)
+    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [user.id]);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset password',
     });
   }
 };

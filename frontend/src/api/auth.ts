@@ -41,6 +41,30 @@ export const authApi = {
     const response = await api.post('/auth/refresh');
     return response.data;
   },
+
+  // Verify email
+  verifyEmail: async (token: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/verify-email', { token });
+    return response.data;
+  },
+
+  // Resend verification email
+  resendVerification: async (email: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/resend-verification', { email });
+    return response.data;
+  },
+
+  // Request password reset
+  forgotPassword: async (email: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+
+  // Reset password with token
+  resetPassword: async (token: string, newPassword: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/reset-password', { token, newPassword });
+    return response.data;
+  },
 };
 
 // Interceptor to handle 401 errors (token expiration)

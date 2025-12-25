@@ -6,6 +6,10 @@ import {
   logout,
   getCurrentUser,
   refreshAccessToken,
+  verifyEmail,
+  resendVerificationEmail,
+  forgotPassword,
+  resetPassword,
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 
@@ -24,6 +28,14 @@ const authLimiter = rateLimit({
 router.post('/register', authLimiter, register);
 router.post('/login', authLimiter, login);
 router.post('/refresh', refreshAccessToken);
+
+// Email verification routes
+router.post('/verify-email', verifyEmail);
+router.post('/resend-verification', authLimiter, resendVerificationEmail);
+
+// Password reset routes
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Protected routes
 router.post('/logout', authenticate, logout);

@@ -13,6 +13,13 @@ export interface User {
   profile_image_url: string | null;
   banner_image_url: string | null;
   verified: boolean;
+  email_verified: boolean;
+  email_verification_token: string | null;
+  email_verification_expires: Date | null;
+  password_reset_token: string | null;
+  password_reset_expires: Date | null;
+  failed_login_attempts: number;
+  locked_until: Date | null;
   created_at: Date;
   updated_at: Date;
 }
