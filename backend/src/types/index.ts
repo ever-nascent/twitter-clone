@@ -13,6 +13,7 @@ export interface User {
   profile_image_url: string | null;
   banner_image_url: string | null;
   verified: boolean;
+  is_admin: boolean;
   email_verified: boolean;
   email_verification_token: string | null;
   email_verification_expires: Date | null;
@@ -35,6 +36,8 @@ export interface PublicUser {
   profile_image_url: string | null;
   banner_image_url: string | null;
   verified: boolean;
+  is_admin: boolean;
+  email_verified: boolean;
   created_at: Date;
 }
 

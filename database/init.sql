@@ -16,6 +16,7 @@ CREATE TABLE users (
     profile_image_url VARCHAR(500),
     banner_image_url VARCHAR(500),
     verified BOOLEAN DEFAULT FALSE,
+    is_admin BOOLEAN DEFAULT FALSE,
     email_verified BOOLEAN DEFAULT FALSE,
     email_verification_token VARCHAR(255),
     email_verification_expires TIMESTAMP,

@@ -107,7 +107,7 @@ export const register = async (req: Request, res: Response) => {
       `INSERT INTO users (username, email, password_hash, display_name, email_verification_token, email_verification_expires)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, username, email, display_name, bio, location, website,
-                 profile_image_url, banner_image_url, verified, email_verified, created_at`,
+                 profile_image_url, banner_image_url, verified, is_admin, email_verified, created_at`,
       [username, email, passwordHash, displayName || username, verificationToken, verificationExpires]
     );
 
@@ -382,7 +382,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
     // Fetch user from database
     const result = await query(
       `SELECT id, username, email, display_name, bio, location, website,
-              profile_image_url, banner_image_url, verified, created_at
+              profile_image_url, banner_image_url, verified, is_admin, email_verified, created_at
        FROM users WHERE id = $1`,
       [req.user.userId]
     );

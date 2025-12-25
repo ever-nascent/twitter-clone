@@ -9,6 +9,8 @@ export interface User {
   profile_image_url: string | null;
   banner_image_url: string | null;
   verified: boolean;
+  is_admin: boolean;
+  email_verified: boolean;
   created_at: string;
 }
 
