@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import http from 'http';
 import { pool } from './config/database';
 import { connectRedis, redisClient } from './config/redis';
 import authRoutes from './routes/authRoutes';
@@ -19,6 +20,9 @@ const PORT = process.env.PORT || 3001;
 
 // Track server start time for uptime calculation
 const serverStartTime = Date.now();
+
+// Store server instance for graceful shutdown
+let server: http.Server | null = null;
 
 // Trust proxy - required for rate limiting behind reverse proxies (nginx, AWS ELB, Cloudflare, etc.)
 // This allows express-rate-limit to correctly identify client IPs
@@ -107,9 +111,18 @@ app.use(morgan('dev'));
 
 // CSRF token endpoint (GET request - no CSRF protection needed)
 // Frontend should call this on app initialization to get CSRF token
+// API versioning: Available on both /api and /api/v1 for backward compatibility
 app.get('/api/csrf-token', generateCsrfToken);
+app.get('/api/v1/csrf-token', generateCsrfToken);
 
-// Routes
+// Routes - API v1
+// API versioning allows for future breaking changes without affecting existing clients
+// Example: /api/v2/auth could have different authentication flow
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/admin', adminRoutes);
+
+// Backward compatibility: Redirect /api/auth and /api/admin to /api/v1
+// TODO: Remove these redirects in v2.0.0 (breaking change)
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 
@@ -218,7 +231,7 @@ const startServer = async () => {
     await connectRedis();
 
     // Start listening
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       logger.info('Server started successfully', {
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
@@ -234,6 +247,116 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+/**
+ * Graceful Shutdown Handler
+ *
+ * PRODUCTION CRITICAL: Prevents connection leaks and data loss during deployments
+ *
+ * Shutdown sequence:
+ * 1. Stop accepting new connections (close HTTP server)
+ * 2. Wait for active requests to complete (with timeout)
+ * 3. Close database connection pool
+ * 4. Close Redis connection
+ * 5. Exit process
+ *
+ * Why this is important:
+ * - Kubernetes sends SIGTERM before killing pods
+ * - Load balancers need time to deregister instance
+ * - Active requests should complete gracefully
+ * - Database connections must be released properly
+ * - Prevents "connection pool exhausted" errors
+ *
+ * References:
+ * - Node.js Best Practices: Graceful Shutdown
+ * - Kubernetes: Container Lifecycle Hooks
+ * - AWS ECS: Task Shutdown
+ */
+async function gracefulShutdown(signal: string) {
+  logger.info(`${signal} received, starting graceful shutdown...`, {
+    signal,
+    uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+  });
+
+  // Track shutdown timeout
+  const shutdownTimeout = setTimeout(() => {
+    logger.error('Graceful shutdown timeout exceeded, forcing exit', {
+      timeout: '30s',
+    });
+    process.exit(1);
+  }, 30000); // 30 second timeout
+
+  try {
+    // Step 1: Stop accepting new connections
+    if (server) {
+      await new Promise<void>((resolve, reject) => {
+        server!.close((err) => {
+          if (err) {
+            logger.error('Error closing HTTP server', {
+              error: err.message,
+            });
+            reject(err);
+          } else {
+            logger.info('HTTP server closed (no longer accepting connections)');
+            resolve();
+          }
+        });
+      });
+    }
+
+    // Step 2: Close database connection pool
+    logger.info('Closing database connection pool...');
+    await pool.end();
+    logger.info('Database connection pool closed');
+
+    // Step 3: Close Redis connection
+    if (redisClient.isOpen) {
+      logger.info('Closing Redis connection...');
+      await redisClient.quit();
+      logger.info('Redis connection closed');
+    }
+
+    // Clear timeout
+    clearTimeout(shutdownTimeout);
+
+    logger.info('Graceful shutdown completed successfully');
+    process.exit(0);
+  } catch (error) {
+    logger.error('Error during graceful shutdown', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    clearTimeout(shutdownTimeout);
+    process.exit(1);
+  }
+}
+
+// Register shutdown handlers
+// SIGTERM: Kubernetes, Docker, AWS ECS send this for graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+// SIGINT: Ctrl+C in terminal (useful for local development)
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Uncaught exceptions (last resort - should be prevented by proper error handling)
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception detected, initiating emergency shutdown', {
+    error: error.message,
+    stack: error.stack,
+    severity: 'CRITICAL',
+  });
+  gracefulShutdown('uncaughtException');
+});
+
+// Unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled promise rejection detected', {
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+    severity: 'CRITICAL',
+  });
+  gracefulShutdown('unhandledRejection');
+});
 
 startServer();
 

@@ -91,10 +91,6 @@ export const cacheHelpers = {
   },
 };
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Shutting down Redis connection...');
-  await redisClient.quit();
-  logger.info('Redis connection closed successfully');
-  process.exit(0);
-});
+// NOTE: Graceful shutdown is now handled centrally in server.ts
+// This prevents duplicate shutdown handlers and ensures proper coordination
+// of all service shutdowns (HTTP server -> Database -> Redis)

@@ -2,8 +2,10 @@ import axios from 'axios';
 import { ApiResponse, User, RegisterFormData, LoginFormData } from '../types';
 
 // Create axios instance with default config
+// API v1: Using versioned API endpoints for future compatibility
+// When v2 is released, we can create a new client with baseURL: '/api/v2'
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: '/api/v1',
   withCredentials: true, // Send cookies with requests
   headers: {
     'Content-Type': 'application/json',

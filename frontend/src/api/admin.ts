@@ -2,8 +2,9 @@ import axios from 'axios';
 import { ApiResponse } from '../types';
 import { getCsrfToken } from './auth';
 
+// API v1: Using versioned API endpoints for future compatibility
 const api = axios.create({
-  baseURL: '/api/admin',
+  baseURL: '/api/v1/admin',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',

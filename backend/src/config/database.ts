@@ -106,10 +106,6 @@ export const query = async (text: string, params?: unknown[]) => {
   }
 };
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('Shutting down database pool...');
-  await pool.end();
-  logger.info('Database pool closed successfully');
-  process.exit(0);
-});
+// NOTE: Graceful shutdown is now handled centrally in server.ts
+// This prevents duplicate shutdown handlers and ensures proper coordination
+// of all service shutdowns (HTTP server -> Database -> Redis)
