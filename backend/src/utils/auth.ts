@@ -109,3 +109,28 @@ export const validateEmail = (email: string): string | null => {
   }
   return null; // Valid email
 };
+
+/**
+ * Mask email address for privacy compliance (GDPR/CCPA)
+ * Shows only first character and domain, masks the rest
+ * Example: "john.doe@example.com" -> "j****@example.com"
+ */
+export const maskEmail = (email: string): string => {
+  if (!email || typeof email !== 'string') {
+    return '****@****.***';
+  }
+
+  const parts = email.split('@');
+  if (parts.length !== 2) {
+    return '****@****.***';
+  }
+
+  const [localPart, domain] = parts;
+
+  // Show only first character of local part
+  const maskedLocal = localPart.length > 0
+    ? localPart[0] + '****'
+    : '****';
+
+  return `${maskedLocal}@${domain}`;
+};

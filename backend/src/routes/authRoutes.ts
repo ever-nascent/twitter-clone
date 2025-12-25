@@ -13,6 +13,7 @@ import {
   resetPassword,
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
+import { csrfProtection } from '../middleware/csrf';
 
 const router = express.Router();
 
@@ -27,6 +28,7 @@ const router = express.Router();
  * - trustProxy must be configured in production (see server.ts)
  * - Rate limits apply per IP address
  * - Stricter than our previous 5/15min, but more UX-friendly with progressive delays
+ * - CSRF protection added to all state-changing endpoints
  */
 
 // Progressive delay middleware - starts slowing down after 5 attempts
@@ -71,21 +73,21 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Public routes - combine progressive delays with hard limits
-router.post('/register', authSlowDown, authLimiter, register);
-router.post('/login', authSlowDown, authLimiter, login);
-router.post('/refresh', refreshLimiter, refreshAccessToken); // Now protected!
+// Public routes - combine CSRF protection, progressive delays, and hard limits
+router.post('/register', csrfProtection, authSlowDown, authLimiter, register);
+router.post('/login', csrfProtection, authSlowDown, authLimiter, login);
+router.post('/refresh', csrfProtection, refreshLimiter, refreshAccessToken); // Now protected!
 
-// Email verification routes
-router.post('/verify-email', verifyEmail);
-router.post('/resend-verification', authLimiter, resendVerificationEmail);
+// Email verification routes - protected with CSRF
+router.post('/verify-email', csrfProtection, verifyEmail);
+router.post('/resend-verification', csrfProtection, authLimiter, resendVerificationEmail);
 
 // Password reset routes - use stricter limits to prevent abuse
-router.post('/forgot-password', passwordResetLimiter, forgotPassword);
-router.post('/reset-password', authLimiter, resetPassword);
+router.post('/forgot-password', csrfProtection, passwordResetLimiter, forgotPassword);
+router.post('/reset-password', csrfProtection, authLimiter, resetPassword);
 
-// Protected routes
-router.post('/logout', authenticate, logout);
+// Protected routes - protected with CSRF
+router.post('/logout', csrfProtection, authenticate, logout);
 router.get('/me', authenticate, getCurrentUser);
 
 export default router;

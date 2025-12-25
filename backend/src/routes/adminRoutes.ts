@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { authenticate, requireAdmin } from '../middleware/auth';
+import { csrfProtection } from '../middleware/csrf';
 import {
   getAllUsers,
   getUserById,
@@ -40,13 +41,13 @@ router.use(adminLimiter);
 // User management
 router.get('/users', authenticate, requireAdmin, getAllUsers);
 router.get('/users/:id', authenticate, requireAdmin, getUserById);
-router.put('/users/:id', authenticate, requireAdmin, updateUser);
-router.delete('/users/:id', authenticate, requireAdmin, deleteUser);
+router.put('/users/:id', csrfProtection, authenticate, requireAdmin, updateUser);
+router.delete('/users/:id', csrfProtection, authenticate, requireAdmin, deleteUser);
 
-// User actions
-router.post('/users/:id/unlock', authenticate, requireAdmin, unlockUser);
-router.post('/users/:id/verify-email', authenticate, requireAdmin, verifyUserEmail);
-router.post('/users/:id/reset-password', authenticate, requireAdmin, resetUserPassword);
+// User actions - protected with CSRF
+router.post('/users/:id/unlock', csrfProtection, authenticate, requireAdmin, unlockUser);
+router.post('/users/:id/verify-email', csrfProtection, authenticate, requireAdmin, verifyUserEmail);
+router.post('/users/:id/reset-password', csrfProtection, authenticate, requireAdmin, resetUserPassword);
 
 // Statistics
 router.get('/stats', authenticate, requireAdmin, getStats);
