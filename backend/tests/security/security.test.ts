@@ -298,7 +298,7 @@ describe('Security Tests - Attack Vectors', () => {
           username: 'testuser',
           email: 'test@example.com',
           password: 'Test1234',
-          displayName: 'Test User 👨‍💻',
+          displayName: 'Test User',
         });
 
       expect(response.status).not.toBe(500);

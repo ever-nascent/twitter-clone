@@ -250,7 +250,7 @@ export const sendPasswordResetEmail = async (
             <p class="code">${resetUrl}</p>
             <p><strong>This link will expire in 1 hour.</strong></p>
             <div class="warning">
-              <strong>⚠️ Security Notice:</strong> If you didn't request a password reset, please ignore this email or contact support if you're concerned about your account security.
+              <strong>Security Notice:</strong> If you didn't request a password reset, please ignore this email or contact support if you're concerned about your account security.
             </div>
           </div>
           <div class="footer">
@@ -339,7 +339,7 @@ export const sendAccountLockedEmail = async (
         </head>
         <body>
           <div class="header">
-            <h1>🔒 Account Temporarily Locked</h1>
+            <h1>Account Temporarily Locked</h1>
           </div>
           <div class="content">
             <h2>Hi ${username},</h2>
