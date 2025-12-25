@@ -15,7 +15,7 @@ import { doubleCsrf } from 'csrf-csrf';
 
 // Configure CSRF protection
 const {
-  generateToken, // Function to generate CSRF tokens
+  generateCsrfToken: csrfTokenGenerator, // Function to generate CSRF tokens
   doubleCsrfProtection, // Middleware to validate CSRF token
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'your-csrf-secret-change-in-production',
@@ -47,12 +47,12 @@ const {
 /**
  * Middleware to generate and send CSRF token to client
  * Use this on a GET endpoint that the frontend calls on app load
- * The generateToken function automatically sets the CSRF cookie
+ * The generateCsrfToken function automatically sets the CSRF cookie
  */
 export const generateCsrfToken = (req: Request, res: Response) => {
   try {
     // Generate token and set cookie automatically
-    const token = generateToken(res);
+    const token = csrfTokenGenerator(req, res);
 
     res.json({
       success: true,
