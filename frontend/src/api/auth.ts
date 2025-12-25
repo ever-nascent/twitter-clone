@@ -10,6 +10,44 @@ const api = axios.create({
   },
 });
 
+// CSRF token storage
+let csrfToken: string | null = null;
+
+/**
+ * Fetch CSRF token from server
+ * Should be called on app initialization
+ */
+export const fetchCsrfToken = async (): Promise<void> => {
+  try {
+    const response = await api.get('/csrf-token');
+    csrfToken = response.data.csrfToken;
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+    // Don't throw - allow app to continue, requests will fail with proper error
+  }
+};
+
+/**
+ * Get current CSRF token
+ */
+export const getCsrfToken = (): string | null => csrfToken;
+
+// Request interceptor to add CSRF token to all state-changing requests
+api.interceptors.request.use(
+  (config) => {
+    // Add CSRF token to POST, PUT, DELETE, PATCH requests
+    if (
+      csrfToken &&
+      config.method &&
+      ['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())
+    ) {
+      config.headers['x-csrf-token'] = csrfToken;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Auth API
 export const authApi = {
   // Register new user
@@ -67,12 +105,25 @@ export const authApi = {
   },
 };
 
-// Interceptor to handle 401 errors (token expiration)
+// Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
+    // Handle CSRF token errors - refetch token and retry
+    if (error.response?.status === 403 && error.response?.data?.error?.includes('CSRF')) {
+      console.warn('CSRF token invalid, refetching...');
+      await fetchCsrfToken();
+
+      // Retry the request with new CSRF token
+      if (csrfToken) {
+        originalRequest.headers['x-csrf-token'] = csrfToken;
+        return api(originalRequest);
+      }
+    }
+
+    // Handle 401 errors (token expiration)
     // Don't retry if:
     // 1. Already retried
     // 2. Request was to /auth/refresh (avoid infinite loop)

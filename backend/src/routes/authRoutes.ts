@@ -12,6 +12,7 @@ import {
   resetPassword,
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
+import { csrfProtection } from '../middleware/csrf';
 
 const router = express.Router();
 
@@ -24,21 +25,21 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Public routes
-router.post('/register', authLimiter, register);
-router.post('/login', authLimiter, login);
-router.post('/refresh', refreshAccessToken);
+// Public routes - protected with CSRF
+router.post('/register', csrfProtection, authLimiter, register);
+router.post('/login', csrfProtection, authLimiter, login);
+router.post('/refresh', csrfProtection, refreshAccessToken);
 
-// Email verification routes
-router.post('/verify-email', verifyEmail);
-router.post('/resend-verification', authLimiter, resendVerificationEmail);
+// Email verification routes - protected with CSRF
+router.post('/verify-email', csrfProtection, verifyEmail);
+router.post('/resend-verification', csrfProtection, authLimiter, resendVerificationEmail);
 
-// Password reset routes
-router.post('/forgot-password', authLimiter, forgotPassword);
-router.post('/reset-password', resetPassword);
+// Password reset routes - protected with CSRF
+router.post('/forgot-password', csrfProtection, authLimiter, forgotPassword);
+router.post('/reset-password', csrfProtection, resetPassword);
 
-// Protected routes
-router.post('/logout', authenticate, logout);
+// Protected routes - protected with CSRF
+router.post('/logout', csrfProtection, authenticate, logout);
 router.get('/me', authenticate, getCurrentUser);
 
 export default router;
