@@ -155,7 +155,7 @@ INSERT INTO follows (follower_id, following_id) VALUES (1, 2);
 
 -- Sample tweets
 INSERT INTO tweets (user_id, content) VALUES
-(1, 'Just set up my Twitter clone! This is exciting! 🚀'),
+(1, 'Just set up my Twitter clone! This is exciting!'),
 (2, 'Hello world! First tweet on this new platform.'),
 (1, 'Learning about authentication and it''s fascinating how secure modern systems are.');
 

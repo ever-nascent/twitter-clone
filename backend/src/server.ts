@@ -71,19 +71,19 @@ const startServer = async () => {
   try {
     // Test database connection
     await pool.query('SELECT NOW()');
-    console.log('✅ Database connected successfully');
+    console.log('[Database] Database connected successfully');
 
     // Connect to Redis
     await connectRedis();
 
     // Start listening
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+      console.log(`[Server] Server running on http://localhost:${PORT}`);
+      console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`[Server] Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    console.error('[Server] Failed to start server:', error);
     process.exit(1);
   }
 };

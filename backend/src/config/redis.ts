@@ -12,11 +12,11 @@ export const redisClient = createClient({
 });
 
 redisClient.on('connect', () => {
-  console.log('✅ Connected to Redis');
+  console.log('[Redis] Connected to Redis');
 });
 
 redisClient.on('error', (err) => {
-  console.error('❌ Redis Client Error:', err);
+  console.error('[Redis] Client Error:', err);
 });
 
 // Connect to Redis

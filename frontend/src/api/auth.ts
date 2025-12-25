@@ -49,19 +49,27 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // If 401 error and not already retried
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Don't retry if:
+    // 1. Already retried
+    // 2. Request was to /auth/refresh (avoid infinite loop)
+    // 3. Request was to /auth/login or /auth/register
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh') &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register')
+    ) {
       originalRequest._retry = true;
 
       try {
         // Try to refresh token
-        await authApi.refreshToken();
+        await api.post('/auth/refresh');
 
         // Retry original request
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, redirect to login
-        window.location.href = '/login';
+        // Refresh failed, just reject (don't redirect here to avoid loops)
         return Promise.reject(refreshError);
       }
     }
