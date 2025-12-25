@@ -118,8 +118,21 @@ export default function AdminPage() {
     }
   };
 
-  const handleEdit = (user: User) => {
-    actions.openEditMode(user);
+  const handleEdit = async (user: User) => {
+    try {
+      actions.setError('');
+      actions.setLoading(true);
+
+      // Fetch full user details with unmasked email
+      const response = await adminApi.getUser(user.id);
+      if (response.success && response.data) {
+        actions.openEditMode(response.data.user);
+      }
+    } catch (err: unknown) {
+      actions.setError(getErrorMessage(err, 'Failed to load user details'));
+    } finally {
+      actions.setLoading(false);
+    }
   };
 
   const handleSaveEdit = async () => {
