@@ -16,7 +16,7 @@ When you log in to Twitter, Facebook, or any major platform, here's what happens
 
 ## Password Security - How Companies Do It
 
-### ❌ What NOT to Do (Dangerous)
+### What NOT to Do (Dangerous)
 ```javascript
 // NEVER DO THIS!
 const password = "myPassword123";
@@ -25,7 +25,7 @@ database.save({ password: password }); // Plain text = DISASTER
 // If database is hacked, all passwords are exposed!
 ```
 
-### ✅ What Companies Actually Do
+### What Companies Actually Do
 
 **Step 1: Hashing**
 ```javascript
@@ -122,8 +122,8 @@ It's three parts separated by dots:
 3. **Signature** (proves it hasn't been tampered with)
 
 **Important:** JWTs are encoded, NOT encrypted. Anyone can read the payload!
-- ✅ Put user ID in JWT
-- ❌ Don't put password or sensitive data in JWT
+- Put user ID in JWT
+- Don't put password or sensitive data in JWT
 
 ## Complete Authentication Flow
 
@@ -204,20 +204,20 @@ User                    Frontend                Backend                Database
 ## Common Security Vulnerabilities & Fixes
 
 ### 1. SQL Injection
-**❌ Vulnerable:**
+* Vulnerable:**
 ```javascript
 const query = `SELECT * FROM users WHERE email = '${email}'`;
 // If email = "'; DROP TABLE users; --", you're hacked!
 ```
 
-**✅ Safe (Use Parameterized Queries):**
+**Safe (Use Parameterized Queries):**
 ```javascript
 const query = 'SELECT * FROM users WHERE email = $1';
 const result = await db.query(query, [email]);
 ```
 
 ### 2. Cross-Site Scripting (XSS)
-**❌ Vulnerable:**
+**Vulnerable:**
 ```javascript
 // User enters: <script>stealCookies()</script>
 const bio = userInput;
@@ -225,7 +225,7 @@ database.save({ bio: bio });
 // Later displayed as HTML - script executes!
 ```
 
-**✅ Safe (Sanitize Input):**
+**Safe (Sanitize Input):**
 ```javascript
 const sanitizeHtml = require('sanitize-html');
 const bio = sanitizeHtml(userInput, {
@@ -235,13 +235,13 @@ const bio = sanitizeHtml(userInput, {
 ```
 
 ### 3. Cross-Site Request Forgery (CSRF)
-**❌ Vulnerable:**
+**Vulnerable:**
 ```javascript
 // Attacker creates: <img src="https://twitter.com/api/tweets/delete/123">
 // If user is logged in, their cookies are sent automatically!
 ```
 
-**✅ Safe (Use SameSite Cookies):**
+**Safe (Use SameSite Cookies):**
 ```javascript
 res.cookie('authToken', token, {
   sameSite: 'strict', // Browser won't send cookie from other sites
@@ -250,7 +250,7 @@ res.cookie('authToken', token, {
 ```
 
 ### 4. Brute Force Attacks
-**❌ Vulnerable:**
+**Vulnerable:**
 ```javascript
 // Attacker tries 10,000 passwords per second
 POST /api/auth/login
@@ -260,7 +260,7 @@ POST /api/auth/login
 // ... continues until success
 ```
 
-**✅ Safe (Rate Limiting):**
+**Safe (Rate Limiting):**
 ```javascript
 const rateLimit = require('express-rate-limit');
 
@@ -274,13 +274,13 @@ app.post('/api/auth/login', loginLimiter, loginHandler);
 ```
 
 ### 5. Weak Passwords
-**❌ Vulnerable:**
+**Vulnerable:**
 ```javascript
 // Allow any password
 if (password.length > 0) { /* OK */ }
 ```
 
-**✅ Safe (Password Requirements):**
+**Safe (Password Requirements):**
 ```javascript
 function validatePassword(password) {
   if (password.length < 8) {
@@ -376,10 +376,8 @@ passport.use(new GoogleStrategy({
 ### 3. Two-Factor Authentication (2FA)
 
 **Extra security layer:**
-1. User enters password ✅
-2. System sends code to phone/email
-3. User enters code ✅
-4. Now fully authenticated
+1. User enters password 2. System sends code to phone/email
+3. User enters code 4. Now fully authenticated
 
 **Types:**
 - SMS codes (least secure, but convenient)
@@ -389,35 +387,35 @@ passport.use(new GoogleStrategy({
 ## Best Practices Checklist
 
 **Password Storage:**
-- ✅ Use bcrypt with salt rounds ≥ 10
-- ✅ Never store plain text passwords
-- ✅ Use environment variables for secrets
+- Use bcrypt with salt rounds ≥ 10
+- Never store plain text passwords
+- Use environment variables for secrets
 
 **Token Security:**
-- ✅ Use httpOnly cookies (prevents XSS)
-- ✅ Use secure flag in production (HTTPS only)
-- ✅ Use sameSite: 'strict' (prevents CSRF)
-- ✅ Set reasonable expiration times
+- Use httpOnly cookies (prevents XSS)
+- Use secure flag in production (HTTPS only)
+- Use sameSite: 'strict' (prevents CSRF)
+- Set reasonable expiration times
 
 **Input Validation:**
-- ✅ Validate on both frontend and backend
-- ✅ Sanitize all user input
-- ✅ Use parameterized queries (prevents SQL injection)
+- Validate on both frontend and backend
+- Sanitize all user input
+- Use parameterized queries (prevents SQL injection)
 
 **Rate Limiting:**
-- ✅ Limit login attempts (5 per 15 minutes)
-- ✅ Limit signup attempts (3 per hour per IP)
-- ✅ Limit API calls (100 per hour per user)
+- Limit login attempts (5 per 15 minutes)
+- Limit signup attempts (3 per hour per IP)
+- Limit API calls (100 per hour per user)
 
 **HTTPS:**
-- ✅ Always use HTTPS in production
-- ✅ Redirect HTTP to HTTPS
-- ✅ Use HSTS headers
+- Always use HTTPS in production
+- Redirect HTTP to HTTPS
+- Use HSTS headers
 
 **Error Messages:**
-- ✅ Don't reveal if email exists: "Invalid email or password" (not "Email not found")
-- ✅ Don't expose stack traces in production
-- ✅ Log security events for monitoring
+- Don't reveal if email exists: "Invalid email or password" (not "Email not found")
+- Don't expose stack traces in production
+- Log security events for monitoring
 
 ## Implementation for Your Twitter Clone
 
