@@ -4,7 +4,7 @@ import {
   deleteSession,
   deleteOtherSessionsController,
 } from '../controllers/sessionController';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -15,12 +15,12 @@ const router = Router();
  */
 
 // Get all active sessions
-router.get('/', authenticateToken, getSessions);
+router.get('/', authenticate, getSessions);
 
 // Delete a specific session (remote logout)
-router.delete('/:id', authenticateToken, deleteSession);
+router.delete('/:id', authenticate, deleteSession);
 
 // Delete all other sessions (logout from all other devices)
-router.delete('/others/all', authenticateToken, deleteOtherSessionsController);
+router.delete('/others/all', authenticate, deleteOtherSessionsController);
 
 export default router;
