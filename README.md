@@ -27,17 +27,17 @@ A modern, scalable Twitter-like social media platform built with React, TypeScri
 ## What This Project Includes
 
 ### Core Features
-- ✅ User authentication (sign up, login, logout)
-- ✅ User profiles with followers/following
-- ✅ Tweet creation (280 characters)
-- ✅ Home timeline feed
-- ✅ Likes and retweets
-- ✅ Reply threads
-- ✅ Real-time updates
-- ✅ Media uploads (images, videos)
-- ✅ Search (tweets and users)
-- ✅ Notifications
-- ✅ Direct messages
+- [x] User authentication (sign up, login, logout)
+- [x] User profiles with followers/following
+- [x] Tweet creation (280 characters)
+- [x] Home timeline feed
+- [x] Likes and retweets
+- [x] Reply threads
+- [x] Real-time updates
+- [x] Media uploads (images, videos)
+- [x] Search (tweets and users)
+- [x] Notifications
+- [x] Direct messages
 
 ### Technology Stack
 
@@ -207,4 +207,4 @@ I'll set everything up for you and get you started!
 
 ---
 
-**Built with ❤️ to make social media better**
+**Built with care to make social media better**

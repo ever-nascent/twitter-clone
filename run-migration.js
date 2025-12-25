@@ -14,27 +14,27 @@ const pool = new Pool({
 });
 
 async function runMigration() {
-  console.log('🔄 Running Phase 1 security migration...');
-  console.log('📂 Reading migration file...');
+  console.log('[MIGRATION] Running Phase 1 security migration...');
+  console.log('[MIGRATION] Reading migration file...');
 
   const migrationPath = path.join(__dirname, 'database', 'migrations', '001_add_phase1_security_fields.sql');
 
   if (!fs.existsSync(migrationPath)) {
-    console.error('❌ Migration file not found:', migrationPath);
+    console.error('[ERROR] Migration file not found:', migrationPath);
     process.exit(1);
   }
 
   const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
 
   try {
-    console.log('🔌 Connecting to database...');
+    console.log('[DATABASE] Connecting to database...');
     await pool.connect();
-    console.log('✅ Connected to database');
+    console.log('[DATABASE] Connected to database');
 
-    console.log('⚙️  Executing migration...');
+    console.log('[MIGRATION] Executing migration...');
     await pool.query(migrationSQL);
 
-    console.log('✅ Migration completed successfully!');
+    console.log('[SUCCESS] Migration completed successfully!');
     console.log('');
     console.log('The following columns have been added to the users table:');
     console.log('  - email_verified');
@@ -49,7 +49,7 @@ async function runMigration() {
     console.log('  - idx_users_email_verification_token');
     console.log('  - idx_users_password_reset_token');
     console.log('');
-    console.log('🎉 Your database is now ready for Phase 1 features!');
+    console.log('[SUCCESS] Your database is now ready for Phase 1 features!');
     console.log('');
     console.log('You can now restart your dev server and test:');
     console.log('  - Email verification');
@@ -59,7 +59,7 @@ async function runMigration() {
     await pool.end();
     process.exit(0);
   } catch (err) {
-    console.error('❌ Migration failed:', err.message);
+    console.error('[ERROR] Migration failed:', err.message);
     console.error('');
     console.error('Full error:', err);
     await pool.end();
