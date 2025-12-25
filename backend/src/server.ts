@@ -73,9 +73,17 @@ app.use(
 );
 
 // CORS configuration
+// SECURITY: Validate FRONTEND_URL in production to prevent misconfiguration
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
+  console.error('[SECURITY ERROR] FRONTEND_URL environment variable is required in production');
+  process.exit(1);
+}
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: frontendUrl,
     credentials: true, // Allow cookies
   })
 );

@@ -72,29 +72,29 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if username already exists
-    const usernameCheck = await query(
-      'SELECT id FROM users WHERE username = $1',
-      [username]
+    // SECURITY: Account Enumeration Prevention
+    // Check both username and email in a single query to prevent timing attacks
+    // Use generic error message to not reveal which field is taken
+    //
+    // Industry Standard Approach:
+    // - Single query prevents timing attack (can't tell which field was checked)
+    // - Generic error message prevents enumeration
+    // - Rate limiting (applied at route level) prevents automated scanning
+    //
+    // UX vs Security Tradeoff:
+    // Some apps reveal specific field for UX, but use CAPTCHA for automated detection.
+    // We chose security-first approach with generic messaging.
+    const existingUserCheck = await query(
+      'SELECT username, email FROM users WHERE username = $1 OR email = $2',
+      [username, email]
     );
 
-    if (usernameCheck.rows.length > 0) {
+    if (existingUserCheck.rows.length > 0) {
+      // SECURITY: Generic error message doesn't reveal which field is taken
+      // This prevents attackers from enumerating valid usernames/emails
       return res.status(400).json({
         success: false,
-        error: 'Username already taken',
-      });
-    }
-
-    // Check if email already exists
-    const emailCheck = await query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-
-    if (emailCheck.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email already registered',
+        error: 'Username or email is already in use. Please try a different one.',
       });
     }
 
@@ -271,10 +271,12 @@ export const login = async (req: Request, res: Response) => {
       }
     }
 
-    // Check if email is verified (optional - you can make this strict or just warn)
-    // For now, we'll allow login but include verification status
-    const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
-    if (requireEmailVerification && !user.email_verified) {
+    // SECURITY: Email verification is mandatory (industry best practice)
+    // Prevents:
+    // - Spam/fake account creation
+    // - Account takeover via typo-squatted emails
+    // - GDPR compliance issues with unverified contacts
+    if (!user.email_verified) {
       return res.status(403).json({
         success: false,
         error: 'Please verify your email before logging in. Check your inbox for the verification link.',
