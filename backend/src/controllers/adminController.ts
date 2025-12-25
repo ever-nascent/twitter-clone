@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { query } from '../config/database';
 import { AuthRequest } from '../types';
-import { hashPassword } from '../utils/auth';
+import { hashPassword, maskEmail } from '../utils/auth';
 
 /**
  * Get all users with pagination and search
@@ -42,10 +42,17 @@ export const getAllUsers = async (req: Request, res: Response) => {
       [...params, limit, offset]
     );
 
+    // SECURITY: Mask emails in list view for GDPR/CCPA compliance
+    // Admins don't need to see full emails in list view - only in detail view
+    const maskedUsers = usersResult.rows.map((user: any) => ({
+      ...user,
+      email: maskEmail(user.email),
+    }));
+
     res.json({
       success: true,
       data: {
-        users: usersResult.rows,
+        users: maskedUsers,
         pagination: {
           page,
           limit,
@@ -66,11 +73,17 @@ export const getAllUsers = async (req: Request, res: Response) => {
 /**
  * Get user by ID
  * GET /api/admin/users/:id
+ *
+ * SECURITY NOTE: Full email is shown in detail view for legitimate admin need
+ * (account verification, support, security investigations).
+ * Email is masked in list views for privacy compliance.
  */
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
+    // SECURITY: Full email exposed here for legitimate admin need-to-know
+    // This is a detail view for specific user management actions
     const result = await query(
       `SELECT
         id, username, email, display_name, bio, location, website,

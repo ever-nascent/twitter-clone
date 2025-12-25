@@ -19,6 +19,10 @@ import {
 
 /**
  * Remove sensitive data from user object
+ *
+ * SECURITY: Strips password_hash and email from user objects before sending to clients.
+ * Use this for public-facing user data (e.g., registration/login responses).
+ * Note: getCurrentUser() intentionally includes email for the user themselves.
  */
 const sanitizeUser = (user: User): PublicUser => {
   const { password_hash, email, ...publicUser } = user;
@@ -369,6 +373,9 @@ export const logout = async (req: AuthRequest, res: Response) => {
 /**
  * Get current user
  * GET /api/auth/me
+ *
+ * SECURITY NOTE: This endpoint returns email ONLY for the authenticated user themselves.
+ * Users can view their own email, but not other users' emails (GDPR/CCPA compliant).
  */
 export const getCurrentUser = async (req: AuthRequest, res: Response) => {
   try {
@@ -379,7 +386,8 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Fetch user from database
+    // SECURITY: Only fetches data for the authenticated user (req.user.userId)
+    // Users can see their own email, which is privacy-compliant
     const result = await query(
       `SELECT id, username, email, display_name, bio, location, website,
               profile_image_url, banner_image_url, verified, is_admin, email_verified, created_at
