@@ -16,10 +16,15 @@ import {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendAccountLockedEmail,
+  sendNewDeviceAlert,
+  sendSuspiciousLoginAlert,
 } from '../utils/email';
 import { verifyCaptcha } from '../utils/captcha';
 import { verifyTOTP, verifyBackupCode } from '../utils/twoFactor';
 import { createSession, deleteSession, deleteOtherSessions } from '../utils/session';
+import { logLoginAttempt, hasRecentSuspiciousLogins } from '../utils/loginMonitoring';
+import { addPasswordToHistory, isPasswordRecentlyUsed } from '../utils/passwordHistory';
+import { isDeviceTrusted, trustDevice, generateDeviceFingerprint } from '../utils/trustedDevices';
 
 /**
  * Remove sensitive data from user object
@@ -132,6 +137,25 @@ export const register = async (req: Request, res: Response) => {
     );
 
     const user = result.rows[0] as User;
+
+    // Add initial password to history (Phase 3)
+    try {
+      await addPasswordToHistory(pool, user.id, passwordHash);
+    } catch (error) {
+      console.error('Failed to add password to history:', error);
+    }
+
+    // Log successful registration/login attempt (Phase 3)
+    try {
+      await logLoginAttempt(pool, {
+        userId: user.id,
+        email,
+        success: true,
+        req,
+      });
+    } catch (error) {
+      console.error('Failed to log login attempt:', error);
+    }
 
     // Send verification email (don't block registration if email fails)
     try {
@@ -261,6 +285,19 @@ export const login = async (req: Request, res: Response) => {
     const isPasswordValid = await comparePassword(password, user.password_hash);
 
     if (!isPasswordValid) {
+      // Log failed login attempt (Phase 3)
+      try {
+        await logLoginAttempt(pool, {
+          userId: user.id,
+          email,
+          success: false,
+          failureReason: 'Invalid password',
+          req,
+        });
+      } catch (error) {
+        console.error('Failed to log login attempt:', error);
+      }
+
       // Increment failed login attempts
       const newFailedAttempts = (user.failed_login_attempts || 0) + 1;
       const maxAttempts = 5;
@@ -317,21 +354,29 @@ export const login = async (req: Request, res: Response) => {
 
     // Check if 2FA is enabled
     if (user.two_factor_enabled) {
-      // Don't issue tokens yet - require 2FA verification first
-      // Reset failed attempts since password was correct
-      if (user.failed_login_attempts > 0) {
-        await query(
-          'UPDATE users SET failed_login_attempts = 0 WHERE id = $1',
-          [user.id]
-        );
-      }
+      // Check if device is trusted (Phase 3)
+      const deviceTrusted = await isDeviceTrusted(pool, user.id, req);
 
-      return res.status(200).json({
-        success: true,
-        requiresTwoFactor: true,
-        userId: user.id, // Needed for 2FA verification
-        message: 'Please enter your 2FA code',
-      });
+      if (deviceTrusted) {
+        // Skip 2FA for trusted device
+        console.log(`[2FA] Skipping 2FA for trusted device (user ${user.id})`);
+      } else {
+        // Don't issue tokens yet - require 2FA verification first
+        // Reset failed attempts since password was correct
+        if (user.failed_login_attempts > 0) {
+          await query(
+            'UPDATE users SET failed_login_attempts = 0 WHERE id = $1',
+            [user.id]
+          );
+        }
+
+        return res.status(200).json({
+          success: true,
+          requiresTwoFactor: true,
+          userId: user.id, // Needed for 2FA verification
+          message: 'Please enter your 2FA code',
+        });
+      }
     }
 
     // Reset failed login attempts on successful login
@@ -340,6 +385,55 @@ export const login = async (req: Request, res: Response) => {
         'UPDATE users SET failed_login_attempts = 0 WHERE id = $1',
         [user.id]
       );
+    }
+
+    // Log successful login attempt (Phase 3)
+    const loginAttempt = await logLoginAttempt(pool, {
+      userId: user.id,
+      email,
+      success: true,
+      req,
+    });
+
+    // Send security alerts if suspicious (Phase 3)
+    if (loginAttempt.suspicious && loginAttempt.suspiciousReason) {
+      try {
+        await sendSuspiciousLoginAlert(
+          user.email,
+          user.username,
+          loginAttempt.suspiciousReason,
+          loginAttempt.ipAddress || 'Unknown',
+          loginAttempt.createdAt
+        );
+      } catch (error) {
+        console.error('Failed to send suspicious login alert:', error);
+      }
+    }
+
+    // Send new device alert (Phase 3)
+    try {
+      // Check if this is a new device
+      const previousLogins = await pool.query(
+        `SELECT COUNT(*) as count FROM login_attempts
+         WHERE user_id = $1 AND device_info = $2 AND success = TRUE
+         AND id != $3`,
+        [user.id, loginAttempt.deviceInfo, loginAttempt.id]
+      );
+
+      const isNewDevice = parseInt(previousLogins.rows[0]?.count || '0', 10) === 0;
+
+      if (isNewDevice && loginAttempt.deviceInfo && loginAttempt.ipAddress) {
+        await sendNewDeviceAlert(
+          user.email,
+          user.username,
+          loginAttempt.deviceInfo,
+          loginAttempt.ipAddress,
+          loginAttempt.location,
+          loginAttempt.createdAt
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send new device alert:', error);
     }
 
     // Generate tokens
@@ -906,7 +1000,7 @@ export const resetPassword = async (req: Request, res: Response) => {
  */
 export const completeLoginWith2FA = async (req: Request, res: Response) => {
   try {
-    const { userId, token, useBackupCode } = req.body;
+    const { userId, token, useBackupCode, trustThisDevice } = req.body;
 
     if (!userId || !token) {
       return res.status(400).json({
@@ -988,6 +1082,15 @@ export const completeLoginWith2FA = async (req: Request, res: Response) => {
 
     // Create session record for tracking
     await createSession(pool, user.id, hashedRefreshToken, req, expiresAt);
+
+    // Trust this device for 30 days if requested (Phase 3)
+    if (trustThisDevice) {
+      try {
+        await trustDevice(pool, user.id, req);
+      } catch (error) {
+        console.error('Failed to trust device:', error);
+      }
+    }
 
     // Set cookies
     res.cookie('accessToken', accessToken, {
@@ -1100,12 +1203,28 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Check password history (Phase 3)
+    const wasRecentlyUsed = await isPasswordRecentlyUsed(pool, req.user.userId, newPassword);
+    if (wasRecentlyUsed) {
+      return res.status(400).json({
+        success: false,
+        error: 'You cannot reuse a password from the last year. Please choose a different password.',
+      });
+    }
+
+    // Add current password to history before changing (Phase 3)
+    try {
+      await addPasswordToHistory(pool, req.user.userId, user.password_hash);
+    } catch (error) {
+      console.error('Failed to add password to history:', error);
+    }
+
     // Hash new password
     const passwordHash = await hashPassword(newPassword);
 
-    // Update password
+    // Update password with password_changed_at timestamp (Phase 3)
     await query(
-      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      'UPDATE users SET password_hash = $1, password_changed_at = NOW() WHERE id = $2',
       [passwordHash, req.user.userId]
     );
 
