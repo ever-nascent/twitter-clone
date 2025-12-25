@@ -10,7 +10,9 @@ import { hashPassword, maskEmail } from '../utils/auth';
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    // SECURITY: Cap maximum limit to prevent DoS via excessive data requests
+    // Max 100 items per page (OWASP recommendation for pagination)
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
     const search = (req.query.search as string) || '';
     const offset = (page - 1) * limit;
 
