@@ -188,30 +188,30 @@ export default function AdminPage() {
 
         {/* Statistics */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">Total Users</div>
-              <div className="text-2xl font-bold">{stats.total_users}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Total Users</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.total_users}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">Verified</div>
-              <div className="text-2xl font-bold text-green-600">{stats.verified_users}</div>
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Verified</div>
+              <div className="text-3xl font-bold text-green-600">{stats.verified_users}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">Unverified</div>
-              <div className="text-2xl font-bold text-yellow-600">{stats.unverified_users}</div>
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Unverified</div>
+              <div className="text-3xl font-bold text-yellow-600">{stats.unverified_users}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">Locked</div>
-              <div className="text-2xl font-bold text-red-600">{stats.locked_users}</div>
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Locked</div>
+              <div className="text-3xl font-bold text-red-600">{stats.locked_users}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">New (24h)</div>
-              <div className="text-2xl font-bold">{stats.new_users_24h}</div>
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">New (24h)</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.new_users_24h}</div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="text-sm text-gray-600">New (7d)</div>
-              <div className="text-2xl font-bold">{stats.new_users_7d}</div>
+            <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">New (7d)</div>
+              <div className="text-3xl font-bold text-gray-900">{stats.new_users_7d}</div>
             </div>
           </div>
         )}
@@ -229,7 +229,7 @@ export default function AdminPage() {
         )}
 
         {/* Search */}
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-md mb-6">
           <input
             type="text"
             placeholder="Search users by username, email, or display name..."
@@ -238,32 +238,32 @@ export default function AdminPage() {
               actions.setSearch(e.target.value);
               actions.setPage(1);
             }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           />
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     ID
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Username
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -331,18 +331,18 @@ export default function AdminPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(user.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex gap-2">
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex flex-wrap gap-2">
                           <button
                             onClick={() => handleEdit(user)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
                           >
                             Edit
                           </button>
                           {!user.email_verified && (
                             <button
                               onClick={() => handleVerifyEmail(user.id)}
-                              className="text-green-600 hover:text-green-900"
+                              className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
                             >
                               Verify Email
                             </button>
@@ -350,20 +350,20 @@ export default function AdminPage() {
                           {user.locked_until && new Date(user.locked_until) > new Date() && (
                             <button
                               onClick={() => handleUnlock(user.id)}
-                              className="text-yellow-600 hover:text-yellow-900"
+                              className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
                             >
                               Unlock
                             </button>
                           )}
                           <button
                             onClick={() => handleResetPassword(user.id, user.username)}
-                            className="text-purple-600 hover:text-purple-900"
+                            className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
                           >
                             Reset Password
                           </button>
                           <button
                             onClick={() => handleDelete(user.id, user.username)}
-                            className="text-red-600 hover:text-red-900"
+                            className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
                           >
                             Delete
                           </button>
@@ -439,7 +439,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     value={editData.username || ''}
-                    onChange={(e) => setEditData({ ...editData, username: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ username: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -451,7 +451,7 @@ export default function AdminPage() {
                   <input
                     type="email"
                     value={editData.email || ''}
-                    onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -463,7 +463,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     value={editData.display_name || ''}
-                    onChange={(e) => setEditData({ ...editData, display_name: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ display_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -474,7 +474,7 @@ export default function AdminPage() {
                   </label>
                   <textarea
                     value={editData.bio || ''}
-                    onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ bio: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
@@ -487,7 +487,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     value={editData.location || ''}
-                    onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ location: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -499,7 +499,7 @@ export default function AdminPage() {
                   <input
                     type="text"
                     value={editData.website || ''}
-                    onChange={(e) => setEditData({ ...editData, website: e.target.value })}
+                    onChange={(e) => actions.updateEditData({ website: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -509,7 +509,7 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={editData.verified || false}
-                      onChange={(e) => setEditData({ ...editData, verified: e.target.checked })}
+                      onChange={(e) => actions.updateEditData({ verified: e.target.checked })}
                       className="mr-2"
                     />
                     <span className="text-sm font-medium text-gray-700">Verified Account Badge</span>
@@ -519,7 +519,7 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={editData.email_verified || false}
-                      onChange={(e) => setEditData({ ...editData, email_verified: e.target.checked })}
+                      onChange={(e) => actions.updateEditData({ email_verified: e.target.checked })}
                       className="mr-2"
                     />
                     <span className="text-sm font-medium text-gray-700">Email Verified</span>
