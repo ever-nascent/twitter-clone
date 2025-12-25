@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { pool } from './config/database';
-import { connectRedis } from './config/redis';
+import { connectRedis, redisClient } from './config/redis';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
@@ -16,6 +16,9 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Track server start time for uptime calculation
+const serverStartTime = Date.now();
 
 // Trust proxy - required for rate limiting behind reverse proxies (nginx, AWS ELB, Cloudflare, etc.)
 // This allows express-rate-limit to correctly identify client IPs
@@ -111,11 +114,68 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Server is running',
+// PRODUCTION: Used by K8s liveness/readiness probes, load balancers, monitoring systems
+// Returns 200 if all critical services are healthy, 503 if any are down
+app.get('/health', async (req, res) => {
+  const checks = {
+    server: { status: 'healthy', message: 'Server is running' },
+    database: { status: 'unknown', message: '' },
+    redis: { status: 'unknown', message: '' },
+  };
+
+  let isHealthy = true;
+
+  // Check database connection
+  try {
+    const start = Date.now();
+    await pool.query('SELECT 1');
+    const duration = Date.now() - start;
+    checks.database = {
+      status: 'healthy',
+      message: `Connected (${duration}ms)`,
+    };
+  } catch (error) {
+    isHealthy = false;
+    checks.database = {
+      status: 'unhealthy',
+      message: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
+
+  // Check Redis connection
+  try {
+    if (!redisClient.isOpen) {
+      throw new Error('Redis client not connected');
+    }
+    const start = Date.now();
+    await redisClient.ping();
+    const duration = Date.now() - start;
+    checks.redis = {
+      status: 'healthy',
+      message: `Connected (${duration}ms)`,
+    };
+  } catch (error) {
+    isHealthy = false;
+    checks.redis = {
+      status: 'unhealthy',
+      message: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
+
+  // Calculate uptime
+  const uptimeSeconds = Math.floor((Date.now() - serverStartTime) / 1000);
+  const uptimeFormatted = `${Math.floor(uptimeSeconds / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m ${uptimeSeconds % 60}s`;
+
+  // Return appropriate status code
+  const statusCode = isHealthy ? 200 : 503;
+
+  res.status(statusCode).json({
+    status: isHealthy ? 'healthy' : 'unhealthy',
     timestamp: new Date().toISOString(),
+    uptime: uptimeFormatted,
+    uptimeSeconds,
+    checks,
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
