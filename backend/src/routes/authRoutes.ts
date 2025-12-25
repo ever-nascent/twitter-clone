@@ -28,7 +28,6 @@ const router = express.Router();
  * - trustProxy must be configured in production (see server.ts)
  * - Rate limits apply per IP address
  * - Stricter than our previous 5/15min, but more UX-friendly with progressive delays
- * - CSRF protection added to all state-changing endpoints
  */
 
 // Progressive delay middleware - starts slowing down after 5 attempts
@@ -63,15 +62,6 @@ const refreshLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Public routes - protected with CSRF
-router.post('/register', csrfProtection, authLimiter, register);
-router.post('/login', csrfProtection, authLimiter, login);
-router.post('/refresh', csrfProtection, refreshAccessToken);
-=======
-=======
->>>>>>> origin/claude/fix-auth-rate-limiting-41okR
 // Rate limiter for password reset requests
 // Stricter to prevent abuse and email spam
 const passwordResetLimiter = rateLimit({
@@ -82,38 +72,18 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-<<<<<<< HEAD
-// Public routes - combine progressive delays with hard limits
-router.post('/register', authSlowDown, authLimiter, register);
-router.post('/login', authSlowDown, authLimiter, login);
-router.post('/refresh', refreshLimiter, refreshAccessToken); // Now protected!
->>>>>>> origin/claude/fix-auth-rate-limiting-41okR
-=======
-// Public routes - combine CSRF protection, progressive delays, and hard limits
-router.post('/register', csrfProtection, authSlowDown, authLimiter, register);
-router.post('/login', csrfProtection, authSlowDown, authLimiter, login);
-router.post('/refresh', csrfProtection, refreshLimiter, refreshAccessToken); // Now protected!
->>>>>>> origin/claude/fix-auth-rate-limiting-41okR
+// Public routes
+router.post('/register', authLimiter, register);
+router.post('/login', authLimiter, login);
+router.post('/refresh', refreshAccessToken);
 
 // Email verification routes - protected with CSRF
 router.post('/verify-email', csrfProtection, verifyEmail);
 router.post('/resend-verification', csrfProtection, authLimiter, resendVerificationEmail);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Password reset routes - protected with CSRF
-router.post('/forgot-password', csrfProtection, authLimiter, forgotPassword);
-router.post('/reset-password', csrfProtection, resetPassword);
-=======
-// Password reset routes - use stricter limits to prevent abuse
-router.post('/forgot-password', passwordResetLimiter, forgotPassword);
-router.post('/reset-password', authLimiter, resetPassword);
->>>>>>> origin/claude/fix-auth-rate-limiting-41okR
-=======
-// Password reset routes - use stricter limits to prevent abuse
-router.post('/forgot-password', csrfProtection, passwordResetLimiter, forgotPassword);
-router.post('/reset-password', csrfProtection, authLimiter, resetPassword);
->>>>>>> origin/claude/fix-auth-rate-limiting-41okR
+// Password reset routes
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
 
 // Protected routes - protected with CSRF
 router.post('/logout', csrfProtection, authenticate, logout);
