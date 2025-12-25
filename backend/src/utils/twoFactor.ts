@@ -9,7 +9,7 @@ import crypto from 'crypto';
  * Compatible with Google Authenticator, Authy, Microsoft Authenticator, etc.
  */
 
-const APP_NAME = 'Twitter Clone';
+const APP_NAME = 'Social Media';
 
 /**
  * Generate a new TOTP secret for a user

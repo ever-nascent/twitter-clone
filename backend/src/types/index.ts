@@ -41,19 +41,22 @@ export interface PublicUser {
   created_at: Date;
 }
 
-// Tweet type
-export interface Tweet {
+// Post type (formerly Tweet)
+export interface Post {
   id: number;
   user_id: number;
   content: string;
-  reply_to_tweet_id: number | null;
-  retweet_of_tweet_id: number | null;
+  reply_to_post_id: number | null;
+  repost_of_post_id: number | null;
   likes_count: number;
-  retweets_count: number;
+  reposts_count: number;
   replies_count: number;
   created_at: Date;
   updated_at: Date;
 }
+
+// Legacy alias for backwards compatibility (deprecated)
+export type Tweet = Post;
 
 // Extended Express Request with user
 export interface AuthRequest extends Request {
