@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "db:migrate": "node scripts/migrate.js",
+    "grant-admin": "node scripts/grant-admin.js",
     "test": "cross-env NODE_ENV=test jest --coverage",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:security": "cross-env NODE_ENV=test jest --testPathPattern=security"
