@@ -22,6 +22,7 @@ export default function AdminPage() {
     hasUppercase: false,
     hasLowercase: false,
     hasNumber: false,
+    hasSpecialChar: false,
     passwordsMatch: false,
   });
 
@@ -36,6 +37,7 @@ export default function AdminPage() {
       hasUppercase: /[A-Z]/.test(newPassword),
       hasLowercase: /[a-z]/.test(newPassword),
       hasNumber: /[0-9]/.test(newPassword),
+      hasSpecialChar: /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(newPassword),
       passwordsMatch: newPassword.length > 0 && newPassword === confirmPassword,
     });
   }, [newPassword, confirmPassword]);
@@ -166,6 +168,7 @@ export default function AdminPage() {
       passwordValidation.hasUppercase &&
       passwordValidation.hasLowercase &&
       passwordValidation.hasNumber &&
+      passwordValidation.hasSpecialChar &&
       passwordValidation.passwordsMatch;
 
     if (!isValid) {
@@ -603,6 +606,9 @@ export default function AdminPage() {
                     <li className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>
                       {passwordValidation.hasNumber ? '✓' : '○'} Contains number
                     </li>
+                    <li className={passwordValidation.hasSpecialChar ? 'text-green-600' : 'text-gray-500'}>
+                      {passwordValidation.hasSpecialChar ? '✓' : '○'} Contains special character
+                    </li>
                     <li className={passwordValidation.passwordsMatch ? 'text-green-600' : 'text-gray-500'}>
                       {passwordValidation.passwordsMatch ? '✓' : '○'} Passwords match
                     </li>
@@ -629,6 +635,7 @@ export default function AdminPage() {
                     !passwordValidation.hasUppercase ||
                     !passwordValidation.hasLowercase ||
                     !passwordValidation.hasNumber ||
+                    !passwordValidation.hasSpecialChar ||
                     !passwordValidation.passwordsMatch
                   }
                   className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"

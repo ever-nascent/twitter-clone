@@ -62,13 +62,21 @@ export const verifyToken = (token: string): JWTPayload => {
  * Validate password strength
  * Requirements:
  * - At least 8 characters
+ * - Maximum 72 characters (bcrypt limitation - prevents DoS)
  * - At least one uppercase letter
  * - At least one lowercase letter
  * - At least one number
+ * - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
+ *
+ * SECURITY: Maximum length prevents bcrypt DoS attacks where extremely
+ * long passwords can cause excessive CPU usage during hashing.
  */
 export const validatePassword = (password: string): string | null => {
   if (password.length < 8) {
     return 'Password must be at least 8 characters long';
+  }
+  if (password.length > 72) {
+    return 'Password must not exceed 72 characters';
   }
   if (!/[A-Z]/.test(password)) {
     return 'Password must contain at least one uppercase letter';
@@ -78,6 +86,9 @@ export const validatePassword = (password: string): string | null => {
   }
   if (!/[0-9]/.test(password)) {
     return 'Password must contain at least one number';
+  }
+  if (!/[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/.test(password)) {
+    return 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)';
   }
   return null; // Valid password
 };
