@@ -197,7 +197,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
 
         {/* Statistics */}
         {stats && (
@@ -251,7 +251,7 @@ export default function AdminPage() {
               actions.setSearch(e.target.value);
               actions.setPage(1);
             }}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -453,7 +453,7 @@ export default function AdminPage() {
                     type="text"
                     value={editData.username || ''}
                     onChange={(e) => actions.updateEditData({ username: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -465,7 +465,7 @@ export default function AdminPage() {
                     type="email"
                     value={editData.email || ''}
                     onChange={(e) => actions.updateEditData({ email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -477,7 +477,7 @@ export default function AdminPage() {
                     type="text"
                     value={editData.display_name || ''}
                     onChange={(e) => actions.updateEditData({ display_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -489,7 +489,7 @@ export default function AdminPage() {
                     value={editData.bio || ''}
                     onChange={(e) => actions.updateEditData({ bio: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -501,7 +501,7 @@ export default function AdminPage() {
                     type="text"
                     value={editData.location || ''}
                     onChange={(e) => actions.updateEditData({ location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -513,7 +513,7 @@ export default function AdminPage() {
                     type="text"
                     value={editData.website || ''}
                     onChange={(e) => actions.updateEditData({ website: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
                   />
                 </div>
 
@@ -579,7 +579,7 @@ export default function AdminPage() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => actions.setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Enter new password"
                     autoFocus
                   />
@@ -593,7 +593,7 @@ export default function AdminPage() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => actions.setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="Confirm new password"
                   />
                 </div>
