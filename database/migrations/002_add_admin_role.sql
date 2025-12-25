@@ -22,9 +22,13 @@ UPDATE users SET is_admin = FALSE WHERE is_admin IS NULL;
 -- Optional: Make the first user an admin (uncomment if needed)
 -- UPDATE users SET is_admin = TRUE WHERE id = (SELECT MIN(id) FROM users);
 
-RAISE NOTICE '';
-RAISE NOTICE '[MIGRATION COMPLETE] Admin role support added';
-RAISE NOTICE '';
-RAISE NOTICE 'To grant admin access to a user, run:';
-RAISE NOTICE '  UPDATE users SET is_admin = TRUE WHERE email = ''your-email@example.com'';';
-RAISE NOTICE '';
+-- Display migration completion message
+DO $$
+BEGIN
+    RAISE NOTICE '';
+    RAISE NOTICE '[MIGRATION COMPLETE] Admin role support added';
+    RAISE NOTICE '';
+    RAISE NOTICE 'To grant admin access to a user, run:';
+    RAISE NOTICE '  UPDATE users SET is_admin = TRUE WHERE email = ''your-email@example.com'';';
+    RAISE NOTICE '';
+END $$;
