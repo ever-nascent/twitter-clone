@@ -22,8 +22,55 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1); // Trust first proxy
 }
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Comprehensive Helmet configuration
+app.use(
+  helmet({
+    // Content Security Policy - Prevents XSS attacks
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for Tailwind
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"], // Prevent clickjacking
+        upgradeInsecureRequests: [], // Upgrade HTTP to HTTPS
+      },
+    },
+    // Strict Transport Security - Force HTTPS in production
+    strictTransportSecurity: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true,
+    },
+    // Prevent MIME type sniffing
+    noSniff: true,
+    // Referrer Policy - Control referrer information
+    referrerPolicy: {
+      policy: 'strict-origin-when-cross-origin',
+    },
+    // X-Frame-Options - Prevent clickjacking (already set by frameAncestors in CSP)
+    frameguard: {
+      action: 'deny',
+    },
+    // XSS Protection header (legacy browsers)
+    xssFilter: true,
+    // Hide X-Powered-By header
+    hidePoweredBy: true,
+    // DNS Prefetch Control
+    dnsPrefetchControl: {
+      allow: false,
+    },
+    // IE No Open - Prevent IE from executing downloads
+    ieNoOpen: true,
+  })
+);
 
 // CORS configuration
 app.use(

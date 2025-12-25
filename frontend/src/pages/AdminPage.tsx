@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminApi, User, UserStats } from '../api/admin';
+import { sanitizeText } from '../utils/sanitize';
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -299,8 +300,14 @@ export default function AdminPage() {
                         {user.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{user.username}</div>
-                        <div className="text-sm text-gray-500">{user.display_name || 'No display name'}</div>
+                        <div
+                          className="text-sm font-medium text-gray-900"
+                          dangerouslySetInnerHTML={{ __html: sanitizeText(user.username) }}
+                        />
+                        <div
+                          className="text-sm text-gray-500"
+                          dangerouslySetInnerHTML={{ __html: sanitizeText(user.display_name || 'No display name') }}
+                        />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {user.email}
