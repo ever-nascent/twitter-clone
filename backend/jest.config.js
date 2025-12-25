@@ -14,4 +14,9 @@ module.exports = {
   verbose: true,
   testTimeout: 10000,
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+    },
+  },
 };
