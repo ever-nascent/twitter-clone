@@ -9,7 +9,11 @@ if (!process.env.JWT_SECRET) {
 }
 // Type assertion: After the check above, we know JWT_SECRET is defined
 const JWT_SECRET: string = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+
+// Access token expiration: 30 minutes (industry standard for better UX)
+// Balances security (short-lived tokens) with usability (fewer refreshes)
+// Still secure due to refresh token rotation and httpOnly cookies
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m';
 
 /**
  * Hash a password using bcrypt
