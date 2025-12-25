@@ -10,6 +10,7 @@
     "db:migrate": "node scripts/migrate.js",
     "grant-admin": "node scripts/grant-admin.js",
     "verify-email": "node scripts/verify-email.js",
+    "list-users": "node scripts/list-users.js",
     "test": "cross-env NODE_ENV=test jest --coverage",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test:security": "cross-env NODE_ENV=test jest --testPathPattern=security"
