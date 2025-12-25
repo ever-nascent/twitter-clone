@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -49,11 +50,14 @@ export const pool = new Pool({
 
 // Test database connection
 pool.on('connect', () => {
-  console.log('[Database] Connected to PostgreSQL database');
+  logger.info('Connected to PostgreSQL database');
 });
 
 pool.on('error', (err) => {
-  console.error('[Database] Unexpected error on idle client', err);
+  logger.error('Unexpected error on idle database client', {
+    error: err instanceof Error ? err.message : 'Unknown error',
+    stack: err instanceof Error ? err.stack : undefined,
+  });
   process.exit(-1);
 });
 
@@ -79,13 +83,13 @@ export const query = async (text: string, params?: unknown[]) => {
     // Log slow queries (configurable threshold)
     const slowQueryThreshold = parseInt(process.env.SLOW_QUERY_THRESHOLD || '1000'); // 1s default
     if (duration > slowQueryThreshold) {
-      console.warn('[Database] SLOW QUERY detected', {
+      logger.warn('Slow query detected', {
         duration,
-        text: text.substring(0, 100), // First 100 chars
+        query: text.substring(0, 100), // First 100 chars
         rows: res.rowCount,
       });
     } else {
-      console.log('[Database] Query executed', {
+      logger.debug('Query executed', {
         duration,
         rows: res.rowCount,
       });
@@ -93,9 +97,10 @@ export const query = async (text: string, params?: unknown[]) => {
 
     return res;
   } catch (error) {
-    console.error('[Database] Query error:', {
+    logger.error('Database query failed', {
       error: error instanceof Error ? error.message : 'Unknown error',
       query: text.substring(0, 100), // First 100 chars (don't log full query - may contain sensitive data)
+      stack: error instanceof Error ? error.stack : undefined,
     });
     throw error;
   }
@@ -103,7 +108,8 @@ export const query = async (text: string, params?: unknown[]) => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  logger.info('Shutting down database pool...');
   await pool.end();
-  console.log('Database pool has ended');
+  logger.info('Database pool closed successfully');
   process.exit(0);
 });

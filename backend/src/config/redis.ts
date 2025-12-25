@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import dotenv from 'dotenv';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -12,11 +13,14 @@ export const redisClient = createClient({
 });
 
 redisClient.on('connect', () => {
-  console.log('[Redis] Connected to Redis');
+  logger.info('Connected to Redis');
 });
 
 redisClient.on('error', (err) => {
-  console.error('[Redis] Client Error:', err);
+  logger.error('Redis client error', {
+    error: err instanceof Error ? err.message : 'Unknown error',
+    stack: err instanceof Error ? err.stack : undefined,
+  });
 });
 
 // Connect to Redis
@@ -24,18 +28,24 @@ export const connectRedis = async () => {
   try {
     await redisClient.connect();
   } catch (error) {
-    console.error('Failed to connect to Redis:', error);
+    logger.error('Failed to connect to Redis', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
   }
 };
 
 // Cache helper functions
 export const cacheHelpers = {
   // Set value with expiration (in seconds)
-  set: async (key: string, value: any, expirationSeconds: number = 3600) => {
+  set: async (key: string, value: unknown, expirationSeconds: number = 3600) => {
     try {
       await redisClient.setEx(key, expirationSeconds, JSON.stringify(value));
     } catch (error) {
-      console.error('Redis SET error:', error);
+      logger.error('Redis SET operation failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        key,
+      });
     }
   },
 
@@ -45,7 +55,10 @@ export const cacheHelpers = {
       const data = await redisClient.get(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Redis GET error:', error);
+      logger.error('Redis GET operation failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        key,
+      });
       return null;
     }
   },
@@ -55,7 +68,10 @@ export const cacheHelpers = {
     try {
       await redisClient.del(key);
     } catch (error) {
-      console.error('Redis DEL error:', error);
+      logger.error('Redis DEL operation failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        key,
+      });
     }
   },
 
@@ -67,14 +83,18 @@ export const cacheHelpers = {
         await redisClient.del(keys);
       }
     } catch (error) {
-      console.error('Redis DEL pattern error:', error);
+      logger.error('Redis DEL pattern operation failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        pattern,
+      });
     }
   },
 };
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
+  logger.info('Shutting down Redis connection...');
   await redisClient.quit();
-  console.log('Redis connection closed');
+  logger.info('Redis connection closed successfully');
   process.exit(0);
 });

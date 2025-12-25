@@ -9,6 +9,7 @@ import { connectRedis } from './config/redis';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
+import { logger } from './utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -77,7 +78,10 @@ app.use(
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
-  console.error('[SECURITY ERROR] FRONTEND_URL environment variable is required in production');
+  logger.error('FRONTEND_URL environment variable is required in production', {
+    environment: process.env.NODE_ENV,
+    severity: 'CRITICAL',
+  });
   process.exit(1);
 }
 
@@ -128,7 +132,13 @@ app.use(csrfErrorHandler);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  logger.error('Unhandled error in request', {
+    error: err.message,
+    stack: err.stack,
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+  });
   res.status(500).json({
     success: false,
     error: process.env.NODE_ENV === 'production'
@@ -142,19 +152,25 @@ const startServer = async () => {
   try {
     // Test database connection
     await pool.query('SELECT NOW()');
-    console.log('[Database] Database connected successfully');
+    logger.info('Database connected successfully');
 
     // Connect to Redis
     await connectRedis();
 
     // Start listening
     app.listen(PORT, () => {
-      console.log(`[Server] Server running on http://localhost:${PORT}`);
-      console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`[Server] Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+      logger.info('Server started successfully', {
+        port: PORT,
+        environment: process.env.NODE_ENV || 'development',
+        frontendUrl: frontendUrl,
+        url: `http://localhost:${PORT}`,
+      });
     });
   } catch (error) {
-    console.error('[Server] Failed to start server:', error);
+    logger.error('Failed to start server', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     process.exit(1);
   }
 };
