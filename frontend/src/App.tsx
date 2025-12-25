@@ -12,6 +12,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import AdminPage from './pages/AdminPage';
 import TwoFactorVerifyPage from './pages/TwoFactorVerifyPage';
 import SecuritySettingsPage from './pages/SecuritySettingsPage';
+import SessionsPage from './pages/SessionsPage';
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -143,6 +144,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SecuritySettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sessions"
+          element={
+            <ProtectedRoute>
+              <SessionsPage />
             </ProtectedRoute>
           }
         />

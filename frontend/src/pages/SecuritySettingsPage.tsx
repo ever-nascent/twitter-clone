@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authApi, twoFactorApi } from '../api/auth';
 import { getErrorMessage } from '../utils/errors';
 
 export default function SecuritySettingsPage() {
+  const navigate = useNavigate();
+
   // 2FA State
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [backupCodesCount, setBackupCodesCount] = useState(0);
@@ -449,6 +452,20 @@ export default function SecuritySettingsPage() {
               {isSubmitting ? 'Changing Password...' : 'Change Password'}
             </button>
           </form>
+        </div>
+
+        {/* Active Sessions Section */}
+        <div className="bg-white shadow rounded-lg p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Sessions</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Manage your active login sessions and see where you're logged in
+          </p>
+          <button
+            onClick={() => navigate('/sessions')}
+            className="w-full px-4 py-2 border border-primary text-primary rounded-md hover:bg-blue-50 font-medium"
+          >
+            View All Sessions
+          </button>
         </div>
       </div>
     </div>

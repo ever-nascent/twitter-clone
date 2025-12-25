@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { query, pool } from '../config/database';
 import { AuthRequest, User, PublicUser, RegisterRequest, LoginRequest } from '../types';
 import {
   hashPassword,
@@ -19,6 +19,7 @@ import {
 } from '../utils/email';
 import { verifyCaptcha } from '../utils/captcha';
 import { verifyTOTP, verifyBackupCode } from '../utils/twoFactor';
+import { createSession, deleteSession, deleteOtherSessions } from '../utils/session';
 
 /**
  * Remove sensitive data from user object
@@ -156,6 +157,9 @@ export const register = async (req: Request, res: Response) => {
       'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [user.id, hashedRefreshToken, expiresAt]
     );
+
+    // Create session record for tracking
+    await createSession(pool, user.id, hashedRefreshToken, req, expiresAt);
 
     // Set cookies with raw token (client needs the raw token)
     res.cookie('accessToken', accessToken, {
@@ -355,6 +359,9 @@ export const login = async (req: Request, res: Response) => {
       [user.id, hashedRefreshToken, expiresAt]
     );
 
+    // Create session record for tracking
+    await createSession(pool, user.id, hashedRefreshToken, req, expiresAt);
+
     // Set cookies with raw token (client needs the raw token)
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -396,10 +403,11 @@ export const logout = async (req: AuthRequest, res: Response) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
-    // Delete refresh token from database (hash it first to match stored value)
+    // Delete refresh token and session from database (hash it first to match stored value)
     if (refreshToken) {
       const hashedToken = hashRefreshToken(refreshToken);
       await query('DELETE FROM refresh_tokens WHERE token = $1', [hashedToken]);
+      await deleteSession(pool, hashedToken);
     }
 
     // Clear cookies
@@ -565,11 +573,17 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       // Delete the old refresh token (invalidate it) - compare with hashed version
       await query('DELETE FROM refresh_tokens WHERE token = $1', [hashedOldToken]);
 
+      // Delete the old session
+      await deleteSession(pool, hashedOldToken);
+
       // Insert the new HASHED refresh token
       await query(
         'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
         [user.id, newHashedRefreshToken, expiresAt]
       );
+
+      // Create new session record
+      await createSession(pool, user.id, newHashedRefreshToken, req, expiresAt);
 
       await query('COMMIT');
     } catch (err) {
@@ -972,6 +986,9 @@ export const completeLoginWith2FA = async (req: Request, res: Response) => {
       [user.id, hashedRefreshToken, expiresAt]
     );
 
+    // Create session record for tracking
+    await createSession(pool, user.id, hashedRefreshToken, req, expiresAt);
+
     // Set cookies
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -1096,15 +1113,17 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     if (logoutOtherDevices) {
       const currentRefreshToken = req.cookies.refreshToken;
       if (currentRefreshToken) {
-        // Delete all refresh tokens except current one
+        // Delete all refresh tokens and sessions except current one
         const hashedCurrentToken = hashRefreshToken(currentRefreshToken);
         await query(
           'DELETE FROM refresh_tokens WHERE user_id = $1 AND token != $2',
           [req.user.userId, hashedCurrentToken]
         );
+        await deleteOtherSessions(pool, req.user.userId, hashedCurrentToken);
       } else {
         // No current token, delete all
         await query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.user.userId]);
+        await query('DELETE FROM sessions WHERE user_id = $1', [req.user.userId]);
       }
     }
 

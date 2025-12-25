@@ -10,6 +10,7 @@ import { connectRedis, redisClient } from './config/redis';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import twoFactorRoutes from './routes/twoFactorRoutes';
+import sessionRoutes from './routes/sessionRoutes';
 import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 import { logger } from './utils/logger';
 
@@ -121,12 +122,14 @@ app.get('/api/v1/csrf-token', generateCsrfToken);
 // Example: /api/v2/auth could have different authentication flow
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth/2fa', twoFactorRoutes);
+app.use('/api/v1/sessions', sessionRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
 // Backward compatibility: Redirect /api/auth and /api/admin to /api/v1
 // TODO: Remove these redirects in v2.0.0 (breaking change)
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/2fa', twoFactorRoutes);
+app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
