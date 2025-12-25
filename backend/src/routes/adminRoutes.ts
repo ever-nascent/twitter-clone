@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireAdmin } from '../middleware/auth';
 import {
   getAllUsers,
   getUserById,
@@ -13,21 +13,22 @@ import {
 
 const router = express.Router();
 
-// For now, all admin routes require authentication
-// In the future, you can add a specific admin role check middleware
+// All admin routes require authentication AND admin privileges
+// authenticate() verifies the JWT token
+// requireAdmin() checks that user has is_admin = true in database
 
 // User management
-router.get('/users', authenticate, getAllUsers);
-router.get('/users/:id', authenticate, getUserById);
-router.put('/users/:id', authenticate, updateUser);
-router.delete('/users/:id', authenticate, deleteUser);
+router.get('/users', authenticate, requireAdmin, getAllUsers);
+router.get('/users/:id', authenticate, requireAdmin, getUserById);
+router.put('/users/:id', authenticate, requireAdmin, updateUser);
+router.delete('/users/:id', authenticate, requireAdmin, deleteUser);
 
 // User actions
-router.post('/users/:id/unlock', authenticate, unlockUser);
-router.post('/users/:id/verify-email', authenticate, verifyUserEmail);
-router.post('/users/:id/reset-password', authenticate, resetUserPassword);
+router.post('/users/:id/unlock', authenticate, requireAdmin, unlockUser);
+router.post('/users/:id/verify-email', authenticate, requireAdmin, verifyUserEmail);
+router.post('/users/:id/reset-password', authenticate, requireAdmin, resetUserPassword);
 
 // Statistics
-router.get('/stats', authenticate, getStats);
+router.get('/stats', authenticate, requireAdmin, getStats);
 
 export default router;

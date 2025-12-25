@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import { verifyToken } from '../utils/auth';
+import { query } from '../config/database';
 
 /**
  * Authentication middleware
@@ -64,5 +65,57 @@ export const optionalAuth = (
   } catch (error) {
     // If token is invalid, just continue without user
     next();
+  }
+};
+
+/**
+ * Admin authorization middleware
+ * Requires user to be authenticated AND have admin privileges
+ * Must be used after authenticate() middleware
+ */
+export const requireAdmin = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Ensure user is authenticated (should be set by authenticate middleware)
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    // Check if user has admin privileges
+    const result = await query(
+      'SELECT is_admin FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const user = result.rows[0];
+
+    if (!user.is_admin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Admin access required',
+      });
+    }
+
+    // User is admin, proceed
+    next();
+  } catch (error) {
+    console.error('Admin authorization error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Authorization check failed',
+    });
   }
 };

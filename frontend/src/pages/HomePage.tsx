@@ -22,12 +22,14 @@ export default function HomePage() {
               <span className="text-gray-700">
                 Welcome, <strong>{user?.display_name || user?.username}</strong>!
               </span>
-              <button
-                onClick={() => navigate('/admin')}
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Admin
-              </button>
+              {user?.is_admin && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Admin
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
