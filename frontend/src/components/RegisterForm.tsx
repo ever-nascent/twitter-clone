@@ -86,7 +86,7 @@ export default function RegisterForm() {
                 placeholder="username"
               />
               <p className="mt-1 text-xs text-gray-500">
-                Your unique @username. Letters, numbers, underscores only. Must start with a letter.
+                Your username. Letters, numbers, underscores only. Must start with a letter.
               </p>
             </div>
 
