@@ -103,4 +103,75 @@ export const adminApi = {
     const response = await api.get('/stats');
     return response.data;
   },
+
+  // Force password reset
+  forcePasswordReset: async (id: number): Promise<ApiResponse> => {
+    const response = await api.post(`/users/${id}/force-password-reset`);
+    return response.data;
+  },
+
+  // Get user security status
+  getUserSecurityStatus: async (id: number): Promise<ApiResponse<{
+    twoFactor: {
+      totp: boolean;
+      sms: boolean;
+      email: boolean;
+    };
+    recoveryCodes: {
+      total: number;
+      remaining: number;
+      hasExpired: boolean;
+    };
+    trustedDevices: {
+      count: number;
+    };
+    account: {
+      forcePasswordReset: boolean;
+      passwordChangedAt: string | null;
+      isLocked: boolean;
+      failedLoginAttempts: number;
+      accountAge: number;
+    };
+    recentActivity: {
+      suspiciousLogins30d: number;
+      recentLogins: Array<{
+        success: boolean;
+        suspicious: boolean;
+        ipAddress: string | null;
+        deviceInfo: string | null;
+        location: string | null;
+        createdAt: string;
+      }>;
+    };
+  }>> => {
+    const response = await api.get(`/users/${id}/security-status`);
+    return response.data;
+  },
+
+  // Get all suspicious logins
+  getAllSuspiciousLogins: async (limit = 50, days = 7): Promise<ApiResponse<{
+    suspiciousLogins: Array<{
+      id: number;
+      userId: number | null;
+      username: string | null;
+      displayName: string | null;
+      email: string;
+      success: boolean;
+      ipAddress: string | null;
+      deviceInfo: string | null;
+      location: string | null;
+      suspiciousReason: string | null;
+      createdAt: string;
+    }>;
+    count: number;
+    filters: {
+      days: number;
+      limit: number;
+    };
+  }>> => {
+    const response = await api.get('/security/suspicious-logins', {
+      params: { limit, days },
+    });
+    return response.data;
+  },
 };

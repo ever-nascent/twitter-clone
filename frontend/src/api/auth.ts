@@ -170,6 +170,191 @@ export const twoFactorApi = {
   },
 };
 
+// Alternative 2FA API (SMS/Email)
+export const alternative2FAApi = {
+  // SMS 2FA
+  setupSMS: async (phone: string, password: string): Promise<ApiResponse<{ phone: string }>> => {
+    const response = await api.post('/auth/2fa/alternative/sms/setup', { phone, password });
+    return response.data;
+  },
+
+  sendSMS: async (): Promise<ApiResponse<{ expiresIn: number }>> => {
+    const response = await api.post('/auth/2fa/alternative/sms/send');
+    return response.data;
+  },
+
+  verifySMS: async (code: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/2fa/alternative/sms/verify', { code });
+    return response.data;
+  },
+
+  disableSMS: async (password: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/2fa/alternative/sms/disable', { password });
+    return response.data;
+  },
+
+  // Email 2FA
+  setupEmail: async (password: string): Promise<ApiResponse<{ email: string }>> => {
+    const response = await api.post('/auth/2fa/alternative/email/setup', { password });
+    return response.data;
+  },
+
+  sendEmail: async (): Promise<ApiResponse<{ expiresIn: number }>> => {
+    const response = await api.post('/auth/2fa/alternative/email/send');
+    return response.data;
+  },
+
+  verifyEmail: async (code: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/2fa/alternative/email/verify', { code });
+    return response.data;
+  },
+
+  disableEmail: async (password: string): Promise<ApiResponse> => {
+    const response = await api.post('/auth/2fa/alternative/email/disable', { password });
+    return response.data;
+  },
+
+  // Get all enabled 2FA methods
+  getMethods: async (): Promise<ApiResponse<{
+    totp: boolean;
+    sms: boolean;
+    email: boolean;
+    smsPhone: string | null;
+  }>> => {
+    const response = await api.get('/auth/2fa/alternative/methods');
+    return response.data;
+  },
+};
+
+// Recovery Codes API
+export const recoveryCodesApi = {
+  generate: async (password: string): Promise<ApiResponse<{
+    codes: string[];
+    count: number;
+    warning: string;
+  }>> => {
+    const response = await api.post('/auth/recovery-codes/generate', { password });
+    return response.data;
+  },
+
+  getStatus: async (): Promise<ApiResponse<{
+    total: number;
+    used: number;
+    remaining: number;
+    hasExpired: boolean;
+    warning?: string;
+  }>> => {
+    const response = await api.get('/auth/recovery-codes/status');
+    return response.data;
+  },
+
+  delete: async (password: string): Promise<ApiResponse<{ deletedCount: number }>> => {
+    const response = await api.delete('/auth/recovery-codes', { data: { password } });
+    return response.data;
+  },
+};
+
+// Trusted Devices API
+export const trustedDevicesApi = {
+  getDevices: async (): Promise<ApiResponse<{
+    devices: Array<{
+      id: number;
+      deviceName: string | null;
+      ipAddress: string | null;
+      trustedAt: string;
+      expiresAt: string;
+      lastUsedAt: string;
+      isCurrent: boolean;
+    }>;
+    count: number;
+  }>> => {
+    const response = await api.get('/auth/trusted-devices');
+    return response.data;
+  },
+
+  revokeDevice: async (deviceId: number): Promise<ApiResponse> => {
+    const response = await api.delete(`/auth/trusted-devices/${deviceId}`);
+    return response.data;
+  },
+
+  revokeAll: async (password: string): Promise<ApiResponse<{ revokedCount: number }>> => {
+    const response = await api.delete('/auth/trusted-devices/all', { data: { password } });
+    return response.data;
+  },
+
+  getCount: async (): Promise<ApiResponse<{ count: number }>> => {
+    const response = await api.get('/auth/trusted-devices/count');
+    return response.data;
+  },
+};
+
+// Login History API
+export const loginHistoryApi = {
+  getHistory: async (limit?: number): Promise<ApiResponse<{
+    history: Array<{
+      id: number;
+      success: boolean;
+      failureReason: string | null;
+      ipAddress: string | null;
+      deviceInfo: string | null;
+      location: string | null;
+      suspicious: boolean;
+      suspiciousReason: string | null;
+      createdAt: string;
+    }>;
+    count: number;
+  }>> => {
+    const response = await api.get('/auth/login-history', {
+      params: limit ? { limit } : undefined,
+    });
+    return response.data;
+  },
+
+  getSuspicious: async (limit?: number): Promise<ApiResponse<{
+    suspicious: Array<{
+      id: number;
+      success: boolean;
+      failureReason: string | null;
+      ipAddress: string | null;
+      deviceInfo: string | null;
+      location: string | null;
+      suspiciousReason: string | null;
+      createdAt: string;
+    }>;
+    count: number;
+  }>> => {
+    const response = await api.get('/auth/login-history/suspicious', {
+      params: limit ? { limit } : undefined,
+    });
+    return response.data;
+  },
+
+  getStats: async (): Promise<ApiResponse<{
+    allTime: {
+      totalAttempts: number;
+      successfulLogins: number;
+      failedLogins: number;
+      suspiciousLogins: number;
+      uniqueIPs: number;
+      uniqueDevices: number;
+    };
+    last30Days: {
+      totalAttempts: number;
+      successfulLogins: number;
+      suspiciousLogins: number;
+    };
+    lastLogin: {
+      timestamp: string;
+      ipAddress: string;
+      deviceInfo: string;
+      location: string;
+    } | null;
+  }>> => {
+    const response = await api.get('/auth/login-history/stats');
+    return response.data;
+  },
+};
+
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => response,
