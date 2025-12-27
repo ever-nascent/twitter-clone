@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 
+import { logger } from './logger';
 /**
  * Alternative 2FA Methods (SMS and Email)
  *
@@ -120,10 +121,10 @@ export async function sendSMSOTP(phone: string, code: string): Promise<boolean> 
   const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
   if (!accountSid || !authToken || !fromNumber) {
-    console.warn('[SMS 2FA] Twilio not configured, skipping SMS send');
+    logger.warn('[SMS 2FA] Twilio not configured, skipping SMS send');
     // In development, log the code
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[SMS 2FA] OTP Code for ${phone}: ${code}`);
+      logger.info('[SMS 2FA] OTP Code for ${phone}', { phone, code });
     }
     return true; // Return success in dev mode
   }
@@ -141,7 +142,7 @@ export async function sendSMSOTP(phone: string, code: string): Promise<boolean> 
 
     return true;
   } catch (error) {
-    console.error('[SMS 2FA] Failed to send SMS:', error);
+    logger.error('[SMS 2FA] Failed to send SMS:', error);
     return false;
   }
 }
@@ -178,7 +179,7 @@ export async function sendEmailOTP(
     await sendEmail(email, subject, html);
     return true;
   } catch (error) {
-    console.error('[Email 2FA] Failed to send email:', error);
+    logger.error('[Email 2FA] Failed to send email:', error);
     return false;
   }
 }

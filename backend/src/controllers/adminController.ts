@@ -68,7 +68,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get all users error:', error);
+    logger.error('Get all users error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch users',
@@ -114,7 +114,7 @@ export const getUserById = async (req: Request, res: Response) => {
       data: { user: result.rows[0] },
     });
   } catch (error) {
-    console.error('Get user by ID error:', error);
+    logger.error('Get user by ID error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user',
@@ -257,7 +257,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       message: 'User updated successfully',
     });
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.error('Update user error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to update user',
@@ -302,7 +302,7 @@ export const unlockUser = async (req: AuthRequest, res: Response) => {
       message: 'User account unlocked successfully',
     });
   } catch (error) {
-    console.error('Unlock user error:', error);
+    logger.error('Unlock user error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to unlock user',
@@ -352,7 +352,7 @@ export const verifyUserEmail = async (req: AuthRequest, res: Response) => {
       message: 'User email verified successfully',
     });
   } catch (error) {
-    console.error('Verify user email error:', error);
+    logger.error('Verify user email error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify email',
@@ -402,7 +402,7 @@ export const deleteUser = async (req: AuthRequest, res: Response) => {
       message: 'User deleted successfully',
     });
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.error('Delete user error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete user',
@@ -432,7 +432,7 @@ export const getStats = async (req: Request, res: Response) => {
       data: { stats: statsResult.rows[0] },
     });
   } catch (error) {
-    console.error('Get stats error:', error);
+    logger.error('Get stats error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics',
@@ -498,7 +498,7 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
       message: 'Password reset successfully',
     });
   } catch (error) {
-    console.error('Reset user password error:', error);
+    logger.error('Reset user password error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to reset password',
@@ -554,7 +554,7 @@ export const forcePasswordReset = async (req: AuthRequest, res: Response) => {
       message: 'User will be required to reset password on next login',
     });
   } catch (error) {
-    console.error('Force password reset error:', error);
+    logger.error('Force password reset error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to force password reset',
@@ -661,7 +661,7 @@ export const getUserSecurityStatus = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get user security status error:', error);
+    logger.error('Get user security status error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get security status',
@@ -749,7 +749,7 @@ export const getAllSuspiciousLogins = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get all suspicious logins error:', error);
+    logger.error('Get all suspicious logins error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get suspicious logins',

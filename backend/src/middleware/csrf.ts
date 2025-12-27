@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { doubleCsrf } from 'csrf-csrf';
+import { logger } from '../utils/logger';
 
 /**
  * CSRF Protection Middleware
@@ -59,7 +60,7 @@ export const generateCsrfToken = (req: Request, res: Response) => {
       csrfToken: token,
     });
   } catch (error) {
-    console.error('CSRF token generation error:', error);
+    logger.error('CSRF token generation error', { error });
     res.status(500).json({
       success: false,
       error: 'CSRF token generation failed',

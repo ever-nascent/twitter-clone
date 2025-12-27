@@ -77,11 +77,9 @@ export function getLocationFromIP(ipAddress: string | undefined): string | null 
     return 'Local Network';
   }
 
-  // TODO: Integrate with GeoIP service
-  // Example: const geo = await geoip.lookup(ipAddress);
-  // return `${geo.city}, ${geo.country}`;
+  // TODO: Integrate with GeoIP service for location tracking
 
-  return null; // Will be enhanced in future
+  return null; // Placeholder - will be enhanced with GeoIP integration
 }
 
 /**

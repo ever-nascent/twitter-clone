@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { logger } from './logger';
 import crypto from 'crypto';
 
 // Email configuration from environment variables
@@ -157,7 +158,7 @@ export const sendVerificationEmail = async (
 
   // Log preview URL for development
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };
 
@@ -277,7 +278,7 @@ export const sendPasswordResetEmail = async (
 
   // Log preview URL for development
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };
 
@@ -382,7 +383,7 @@ export const sendAccountLockedEmail = async (
 
   // Log preview URL for development
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };
 
@@ -482,7 +483,7 @@ export const sendNewDeviceAlert = async (
   const info = await transporter.sendMail(mailOptions);
 
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };
 
@@ -575,7 +576,7 @@ export const sendSuspiciousLoginAlert = async (
   const info = await transporter.sendMail(mailOptions);
 
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };
 
@@ -601,6 +602,6 @@ export const sendEmail = async (
   const info = await transporter.sendMail(mailOptions);
 
   if (!EMAIL_USER || !EMAIL_PASSWORD) {
-    console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    logger.info('Email preview URL available', { url: nodemailer.getTestMessageUrl(info) });
   }
 };

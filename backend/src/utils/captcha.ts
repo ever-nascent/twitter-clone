@@ -1,5 +1,6 @@
 /**
  * Google reCAPTCHA v3 Verification Utility
+import { logger } from './logger';
  *
  * reCAPTCHA v3 returns a score (1.0 is very likely a good interaction, 0.0 is very likely a bot)
  *
@@ -32,10 +33,10 @@ export async function verifyCaptcha(
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
   if (!secretKey) {
-    console.error('[CAPTCHA] RECAPTCHA_SECRET_KEY not configured');
+    logger.error('[CAPTCHA] RECAPTCHA_SECRET_KEY not configured');
     // In development, allow bypass if not configured
     if (process.env.NODE_ENV === 'development') {
-      console.warn('[CAPTCHA] Bypassing verification in development mode');
+      logger.warn('[CAPTCHA] Bypassing verification in development mode');
       return { success: true, score: 1.0 };
     }
     return { success: false, error: 'CAPTCHA not configured' };
@@ -62,7 +63,7 @@ export async function verifyCaptcha(
 
     // Check if verification was successful
     if (!data.success) {
-      console.error('[CAPTCHA] Verification failed:', data['error-codes']);
+      logger.error('[CAPTCHA] Verification failed:', data['error-codes']);
       return {
         success: false,
         error: 'CAPTCHA verification failed',
@@ -71,7 +72,7 @@ export async function verifyCaptcha(
 
     // Verify the action matches what we expected
     if (data.action !== expectedAction) {
-      console.error(
+      logger.error(
         `[CAPTCHA] Action mismatch. Expected: ${expectedAction}, Got: ${data.action}`
       );
       return {
@@ -85,7 +86,7 @@ export async function verifyCaptcha(
     const threshold = parseFloat(process.env.RECAPTCHA_SCORE_THRESHOLD || '0.5');
 
     if (data.score < threshold) {
-      console.warn(
+      logger.warn(
         `[CAPTCHA] Low score detected. Score: ${data.score}, Threshold: ${threshold}`
       );
       return {
@@ -96,13 +97,13 @@ export async function verifyCaptcha(
     }
 
     // Success!
-    console.log(`[CAPTCHA] Verification passed. Score: ${data.score}, Action: ${data.action}`);
+    logger.info(`[CAPTCHA] Verification passed. Score: ${data.score}, Action: ${data.action}`);
     return {
       success: true,
       score: data.score,
     };
   } catch (error) {
-    console.error('[CAPTCHA] Error verifying token:', error);
+    logger.error('[CAPTCHA] Error verifying token:', error);
     return {
       success: false,
       error: 'CAPTCHA verification error',

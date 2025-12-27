@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
+import { logger } from '../utils/logger';
 import { verifyToken } from '../utils/auth';
 import { query } from '../config/database';
 
@@ -112,7 +113,7 @@ export const requireAdmin = async (
     // User is admin, proceed
     next();
   } catch (error) {
-    console.error('Admin authorization error:', error);
+    logger.error('Admin authorization error', { error });
     return res.status(500).json({
       success: false,
       error: 'Authorization check failed',

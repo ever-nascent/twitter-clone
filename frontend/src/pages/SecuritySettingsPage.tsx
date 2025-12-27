@@ -47,7 +47,7 @@ export default function SecuritySettingsPage() {
         setBackupCodesCount(response.data.backupCodesCount);
       }
     } catch (err) {
-      console.error('Failed to load 2FA status:', err);
+      // Failed to load 2FA status - will show default state
     } finally {
       setIsLoading2FA(false);
     }

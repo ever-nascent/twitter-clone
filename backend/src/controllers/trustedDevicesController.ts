@@ -56,7 +56,7 @@ export const getDevices = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get trusted devices error:', error);
+    logger.error('Get trusted devices error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get trusted devices',
@@ -106,7 +106,7 @@ export const revokeDeviceById = async (req: AuthRequest, res: Response) => {
       message: 'Device trust revoked successfully',
     });
   } catch (error) {
-    console.error('Revoke device error:', error);
+    logger.error('Revoke device error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to revoke device',
@@ -180,7 +180,7 @@ export const revokeAllDevicesForUser = async (
       },
     });
   } catch (error) {
-    console.error('Revoke all devices error:', error);
+    logger.error('Revoke all devices error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to revoke all devices',
@@ -212,7 +212,7 @@ export const getDeviceCount = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get device count error:', error);
+    logger.error('Get device count error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get device count',
