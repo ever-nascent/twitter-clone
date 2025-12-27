@@ -13,6 +13,8 @@ import AdminPage from './pages/AdminPage';
 import TwoFactorVerifyPage from './pages/TwoFactorVerifyPage';
 import SecuritySettingsPage from './pages/SecuritySettingsPage';
 import SessionsPage from './pages/SessionsPage';
+import TrustedDevicesPage from './pages/TrustedDevicesPage';
+import LoginHistoryPage from './pages/LoginHistoryPage';
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -152,6 +154,22 @@ function App() {
           element={
             <ProtectedRoute>
               <SessionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trusted-devices"
+          element={
+            <ProtectedRoute>
+              <TrustedDevicesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/login-history"
+          element={
+            <ProtectedRoute>
+              <LoginHistoryPage />
             </ProtectedRoute>
           }
         />

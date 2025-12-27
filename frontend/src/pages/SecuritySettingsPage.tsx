@@ -454,6 +454,46 @@ export default function SecuritySettingsPage() {
           </form>
         </div>
 
+        {/* Security Features Section */}
+        <div className="bg-white shadow rounded-lg p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Security Features</h2>
+          <div className="space-y-3">
+            <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium text-gray-900">Trusted Devices</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Manage devices that can skip 2FA for 30 days
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/trusted-devices')}
+                  className="px-4 py-2 text-sm text-primary hover:text-blue-700 font-medium"
+                >
+                  Manage →
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium text-gray-900">Login History</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    View all login attempts and suspicious activity
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/login-history')}
+                  className="px-4 py-2 text-sm text-primary hover:text-blue-700 font-medium"
+                >
+                  View →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Active Sessions Section */}
         <div className="bg-white shadow rounded-lg p-6 mt-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Sessions</h2>
