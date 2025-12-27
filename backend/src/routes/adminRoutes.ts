@@ -11,6 +11,9 @@ import {
   deleteUser,
   getStats,
   resetUserPassword,
+  forcePasswordReset,
+  getUserSecurityStatus,
+  getAllSuspiciousLogins,
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -48,6 +51,13 @@ router.delete('/users/:id', csrfProtection, authenticate, requireAdmin, deleteUs
 router.post('/users/:id/unlock', csrfProtection, authenticate, requireAdmin, unlockUser);
 router.post('/users/:id/verify-email', csrfProtection, authenticate, requireAdmin, verifyUserEmail);
 router.post('/users/:id/reset-password', csrfProtection, authenticate, requireAdmin, resetUserPassword);
+router.post('/users/:id/force-password-reset', csrfProtection, authenticate, requireAdmin, forcePasswordReset);
+
+// Security status
+router.get('/users/:id/security-status', authenticate, requireAdmin, getUserSecurityStatus);
+
+// Security monitoring
+router.get('/security/suspicious-logins', authenticate, requireAdmin, getAllSuspiciousLogins);
 
 // Statistics
 router.get('/stats', authenticate, requireAdmin, getStats);

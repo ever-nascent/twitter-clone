@@ -11,6 +11,10 @@ import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import twoFactorRoutes from './routes/twoFactorRoutes';
 import sessionRoutes from './routes/sessionRoutes';
+import alternative2FARoutes from './routes/alternative2FARoutes';
+import recoveryCodesRoutes from './routes/recoveryCodesRoutes';
+import trustedDevicesRoutes from './routes/trustedDevicesRoutes';
+import loginHistoryRoutes from './routes/loginHistoryRoutes';
 import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 import { logger } from './utils/logger';
 
@@ -122,6 +126,10 @@ app.get('/api/v1/csrf-token', generateCsrfToken);
 // Example: /api/v2/auth could have different authentication flow
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/auth/2fa', twoFactorRoutes);
+app.use('/api/v1/auth/2fa/alternative', alternative2FARoutes);
+app.use('/api/v1/auth/recovery-codes', recoveryCodesRoutes);
+app.use('/api/v1/auth/trusted-devices', trustedDevicesRoutes);
+app.use('/api/v1/auth/login-history', loginHistoryRoutes);
 app.use('/api/v1/sessions', sessionRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
@@ -129,6 +137,10 @@ app.use('/api/v1/admin', adminRoutes);
 // TODO: Remove these redirects in v2.0.0 (breaking change)
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/2fa', twoFactorRoutes);
+app.use('/api/auth/2fa/alternative', alternative2FARoutes);
+app.use('/api/auth/recovery-codes', recoveryCodesRoutes);
+app.use('/api/auth/trusted-devices', trustedDevicesRoutes);
+app.use('/api/auth/login-history', loginHistoryRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
 

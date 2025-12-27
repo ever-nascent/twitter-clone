@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
-import { query } from '../config/database';
+import { pool, query } from '../config/database';
 import { AuthRequest, User } from '../types';
 import { hashPassword, maskEmail } from '../utils/auth';
 import { logAudit, AuditAction } from '../utils/audit';
+import { getRecoveryCodeStatus } from '../utils/recoveryCodes';
+import { getTrustedDeviceCount } from '../utils/trustedDevices';
+import { getUserLoginHistory } from '../utils/loginMonitoring';
 
 /**
  * Get all users with pagination and search
@@ -499,6 +502,257 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to reset password',
+    });
+  }
+};
+
+/**
+ * Force user to reset password on next login
+ * POST /api/admin/users/:id/force-password-reset
+ *
+ * Sets force_password_reset flag, requiring user to change password
+ */
+export const forcePasswordReset = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get user info for audit log
+    const userResult = await query('SELECT username FROM users WHERE id = $1', [id]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+    const targetUsername = userResult.rows[0].username;
+
+    // Set force password reset flag
+    await query(
+      'UPDATE users SET force_password_reset = TRUE WHERE id = $1',
+      [id]
+    );
+
+    // AUDIT LOG: Record forced password reset (CRITICAL - security action)
+    await logAudit(
+      {
+        admin_user_id: req.user!.userId,
+        admin_username: req.user!.username,
+        action: AuditAction.USER_PASSWORD_RESET,
+        target_type: 'user',
+        target_id: parseInt(id),
+        target_identifier: targetUsername,
+        details: {
+          forced: true,
+          reason: 'Admin forced password reset',
+        },
+      },
+      req
+    );
+
+    res.json({
+      success: true,
+      message: 'User will be required to reset password on next login',
+    });
+  } catch (error) {
+    console.error('Force password reset error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to force password reset',
+    });
+  }
+};
+
+/**
+ * Get security status for a user
+ * GET /api/admin/users/:id/security-status
+ *
+ * Returns comprehensive security information:
+ * - 2FA status (TOTP, SMS, Email)
+ * - Recovery codes status
+ * - Trusted devices count
+ * - Recent login history
+ * - Password last changed
+ * - Account flags (force_password_reset, etc.)
+ */
+export const getUserSecurityStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = parseInt(id, 10);
+
+    // Get user security settings
+    const userResult = await query(
+      `SELECT
+         two_factor_enabled,
+         sms_2fa_enabled,
+         email_2fa_enabled,
+         force_password_reset,
+         password_changed_at,
+         locked_until,
+         failed_login_attempts,
+         created_at
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found',
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Get recovery codes status
+    const recoveryStatus = await getRecoveryCodeStatus(pool, userId);
+
+    // Get trusted devices count
+    const trustedDevicesCount = await getTrustedDeviceCount(pool, userId);
+
+    // Get recent login history (last 10 attempts)
+    const recentLogins = await getUserLoginHistory(pool, userId, 10);
+
+    // Get suspicious login count
+    const suspiciousResult = await pool.query(
+      `SELECT COUNT(*) as count FROM login_attempts
+       WHERE user_id = $1 AND suspicious = TRUE
+       AND created_at > NOW() - INTERVAL '30 days'`,
+      [userId]
+    );
+    const recentSuspiciousLogins = parseInt(suspiciousResult.rows[0]?.count || '0', 10);
+
+    res.json({
+      success: true,
+      data: {
+        twoFactor: {
+          totp: user.two_factor_enabled,
+          sms: user.sms_2fa_enabled,
+          email: user.email_2fa_enabled,
+        },
+        recoveryCodes: {
+          total: recoveryStatus.total,
+          remaining: recoveryStatus.remaining,
+          hasExpired: recoveryStatus.hasExpired,
+        },
+        trustedDevices: {
+          count: trustedDevicesCount,
+        },
+        account: {
+          forcePasswordReset: user.force_password_reset,
+          passwordChangedAt: user.password_changed_at,
+          isLocked: user.locked_until && new Date(user.locked_until) > new Date(),
+          failedLoginAttempts: user.failed_login_attempts,
+          accountAge: Math.floor(
+            (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
+          ),
+        },
+        recentActivity: {
+          suspiciousLogins30d: recentSuspiciousLogins,
+          recentLogins: recentLogins.slice(0, 5).map((login) => ({
+            success: login.success,
+            suspicious: login.suspicious,
+            ipAddress: login.ipAddress,
+            deviceInfo: login.deviceInfo,
+            location: login.location,
+            createdAt: login.createdAt,
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get user security status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get security status',
+    });
+  }
+};
+
+/**
+ * Get all suspicious logins across all users
+ * GET /api/admin/security/suspicious-logins
+ *
+ * Query parameters:
+ * - limit: Maximum number of records (default: 50, max: 200)
+ * - days: Number of days to look back (default: 7, max: 90)
+ *
+ * Returns suspicious login attempts with user information
+ */
+export const getAllSuspiciousLogins = async (req: Request, res: Response) => {
+  try {
+    // Parse query parameters
+    const limitParam = req.query.limit;
+    const daysParam = req.query.days;
+
+    let limit = 50; // Default
+    let days = 7; // Default
+
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam as string, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0 && parsedLimit <= 200) {
+        limit = parsedLimit;
+      }
+    }
+
+    if (daysParam) {
+      const parsedDays = parseInt(daysParam as string, 10);
+      if (!isNaN(parsedDays) && parsedDays > 0 && parsedDays <= 90) {
+        days = parsedDays;
+      }
+    }
+
+    // Get suspicious logins with user information
+    const result = await pool.query(
+      `SELECT
+         la.id,
+         la.user_id,
+         la.email,
+         la.success,
+         la.ip_address,
+         la.device_info,
+         la.location,
+         la.suspicious_reason,
+         la.created_at,
+         u.username,
+         u.display_name
+       FROM login_attempts la
+       LEFT JOIN users u ON la.user_id = u.id
+       WHERE la.suspicious = TRUE
+       AND la.created_at > NOW() - INTERVAL '${days} days'
+       ORDER BY la.created_at DESC
+       LIMIT $1`,
+      [limit]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        suspiciousLogins: result.rows.map((login) => ({
+          id: login.id,
+          userId: login.user_id,
+          username: login.username,
+          displayName: login.display_name,
+          email: maskEmail(login.email), // Mask email for privacy
+          success: login.success,
+          ipAddress: login.ip_address,
+          deviceInfo: login.device_info,
+          location: login.location,
+          suspiciousReason: login.suspicious_reason,
+          createdAt: login.created_at,
+        })),
+        count: result.rows.length,
+        filters: {
+          days,
+          limit,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Get all suspicious logins error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get suspicious logins',
     });
   }
 };
