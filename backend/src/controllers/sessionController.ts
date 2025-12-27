@@ -53,7 +53,7 @@ export const getSessions = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get sessions error:', error);
+    logger.error('Get sessions error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch sessions',
@@ -118,7 +118,7 @@ export const deleteSession = async (req: AuthRequest, res: Response) => {
       message: 'Session deleted successfully',
     });
   } catch (error) {
-    console.error('Delete session error:', error);
+    logger.error('Delete session error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete session',
@@ -167,7 +167,7 @@ export const deleteOtherSessionsController = async (req: AuthRequest, res: Respo
       deletedCount,
     });
   } catch (error) {
-    console.error('Delete other sessions error:', error);
+    logger.error('Delete other sessions error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete sessions',

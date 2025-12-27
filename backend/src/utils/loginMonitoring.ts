@@ -149,12 +149,7 @@ async function detectSuspiciousActivity(
     reasons.push(`${recentFailures} failed attempts in last hour`);
   }
 
-  // Check 5: Unusual time (3am-6am local time)
-  // This would require timezone detection - placeholder for future enhancement
-  // const hour = new Date().getHours();
-  // if (hour >= 3 && hour < 6) {
-  //   reasons.push('Unusual time (3-6 AM)');
-  // }
+  // TODO: Add timezone-based unusual time detection (requires timezone integration)
 
   const suspicious = reasons.length >= 2; // Flag if 2+ anomalies
   const suspiciousReason = reasons.length > 0 ? reasons.join(', ') : null;

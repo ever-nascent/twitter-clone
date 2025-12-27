@@ -24,7 +24,7 @@ export const fetchCsrfToken = async (): Promise<void> => {
     const response = await api.get('/csrf-token');
     csrfToken = response.data.csrfToken;
   } catch (error) {
-    console.error('Failed to fetch CSRF token:', error);
+    // Failed to fetch CSRF token - requests will proceed without it
     // Don't throw - allow app to continue, requests will fail with proper error
   }
 };
@@ -363,7 +363,7 @@ api.interceptors.response.use(
 
     // Handle CSRF token errors - refetch token and retry
     if (error.response?.status === 403 && error.response?.data?.error?.includes('CSRF')) {
-      console.warn('CSRF token invalid, refetching...');
+      // CSRF token invalid, refetching...
       await fetchCsrfToken();
 
       // Retry the request with new CSRF token

@@ -9,6 +9,7 @@ import {
   hasValidRecoveryCodes,
   deleteAllRecoveryCodes,
 } from '../utils/recoveryCodes';
+import { logger } from '../utils/logger';
 
 /**
  * Generate new recovery codes
@@ -75,7 +76,7 @@ export const generateCodes = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Generate recovery codes error:', error);
+    logger.error('Generate recovery codes error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to generate recovery codes',
@@ -126,7 +127,7 @@ export const getStatus = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get recovery code status error:', error);
+    logger.error('Get recovery code status error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get recovery code status',
@@ -186,7 +187,7 @@ export const verifyCode = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Verify recovery code error:', error);
+    logger.error('Verify recovery code error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify recovery code',
@@ -256,7 +257,7 @@ export const deleteCodes = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Delete recovery codes error:', error);
+    logger.error('Delete recovery codes error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to delete recovery codes',

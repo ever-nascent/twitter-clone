@@ -25,14 +25,14 @@ const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 export async function executeRecaptcha(action: string): Promise<string> {
   // If no site key configured, return empty string (for development)
   if (!RECAPTCHA_SITE_KEY || RECAPTCHA_SITE_KEY === 'your_recaptcha_site_key_here') {
-    console.warn('[CAPTCHA] reCAPTCHA not configured, skipping');
+    // reCAPTCHA not configured - server will handle validation
     return '';
   }
 
   return new Promise((resolve, reject) => {
     // Wait for reCAPTCHA to be ready
     if (typeof window.grecaptcha === 'undefined') {
-      console.error('[CAPTCHA] reCAPTCHA script not loaded');
+      // reCAPTCHA script not loaded - fall back to empty token
       return resolve(''); // Fail gracefully
     }
 
@@ -43,7 +43,7 @@ export async function executeRecaptcha(action: string): Promise<string> {
         });
         resolve(token);
       } catch (error) {
-        console.error('[CAPTCHA] Error executing reCAPTCHA:', error);
+        // Error executing reCAPTCHA - will reject
         reject(error);
       }
     });

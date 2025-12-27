@@ -10,7 +10,7 @@ export function useRecaptcha() {
   useEffect(() => {
     // Skip if not configured
     if (!RECAPTCHA_SITE_KEY || RECAPTCHA_SITE_KEY === 'your_recaptcha_site_key_here') {
-      console.warn('[CAPTCHA] reCAPTCHA not configured');
+      // reCAPTCHA not configured - skip loading
       return;
     }
 
@@ -26,11 +26,11 @@ export function useRecaptcha() {
     script.defer = true;
 
     script.onload = () => {
-      console.log('[CAPTCHA] reCAPTCHA v3 loaded successfully');
+      // reCAPTCHA v3 loaded successfully
     };
 
     script.onerror = () => {
-      console.error('[CAPTCHA] Failed to load reCAPTCHA script');
+      // Failed to load reCAPTCHA script - form validation will fall back to server-side only
     };
 
     document.head.appendChild(script);

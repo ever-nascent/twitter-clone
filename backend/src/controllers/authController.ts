@@ -25,6 +25,7 @@ import { createSession, deleteSession, deleteOtherSessions } from '../utils/sess
 import { logLoginAttempt, hasRecentSuspiciousLogins } from '../utils/loginMonitoring';
 import { addPasswordToHistory, isPasswordRecentlyUsed } from '../utils/passwordHistory';
 import { isDeviceTrusted, trustDevice, generateDeviceFingerprint } from '../utils/trustedDevices';
+import { logger } from '../utils/logger';
 
 /**
  * Remove sensitive data from user object
@@ -142,7 +143,7 @@ export const register = async (req: Request, res: Response) => {
     try {
       await addPasswordToHistory(pool, user.id, passwordHash);
     } catch (error) {
-      console.error('Failed to add password to history:', error);
+      logger.error('Failed to add password to history', { error, userId: user.id });
     }
 
     // Log successful registration/login attempt (Phase 3)
@@ -154,14 +155,14 @@ export const register = async (req: Request, res: Response) => {
         req,
       });
     } catch (error) {
-      console.error('Failed to log login attempt:', error);
+      logger.error('Failed to log login attempt', { error, userId: user.id, email });
     }
 
     // Send verification email (don't block registration if email fails)
     try {
       await sendVerificationEmail(email, username, verificationToken);
     } catch (emailError) {
-      console.error('Failed to send verification email:', emailError);
+      logger.error('Failed to send verification email', { error: emailError, email, username });
       // Continue with registration even if email fails
     }
 
@@ -210,7 +211,7 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to create account',
@@ -295,7 +296,7 @@ export const login = async (req: Request, res: Response) => {
           req,
         });
       } catch (error) {
-        console.error('Failed to log login attempt:', error);
+        logger.error('Failed to log login attempt', { error, userId: user.id, email });
       }
 
       // Increment failed login attempts
@@ -316,7 +317,7 @@ export const login = async (req: Request, res: Response) => {
         try {
           await sendAccountLockedEmail(user.email, user.username, lockUntil);
         } catch (emailError) {
-          console.error('Failed to send account locked email:', emailError);
+          logger.error('Failed to send account locked email', { error: emailError, email: user.email });
         }
 
         return res.status(403).json({
@@ -359,7 +360,7 @@ export const login = async (req: Request, res: Response) => {
 
       if (deviceTrusted) {
         // Skip 2FA for trusted device
-        console.log(`[2FA] Skipping 2FA for trusted device (user ${user.id})`);
+        logger.info('Skipping 2FA for trusted device', { userId: user.id });
       } else {
         // Don't issue tokens yet - require 2FA verification first
         // Reset failed attempts since password was correct
@@ -406,7 +407,7 @@ export const login = async (req: Request, res: Response) => {
           loginAttempt.createdAt
         );
       } catch (error) {
-        console.error('Failed to send suspicious login alert:', error);
+        logger.error('Failed to send suspicious login alert', { error, userId: user.id, email: user.email });
       }
     }
 
@@ -433,7 +434,7 @@ export const login = async (req: Request, res: Response) => {
         );
       }
     } catch (error) {
-      console.error('Failed to send new device alert:', error);
+      logger.error('Failed to send new device alert', { error, userId: user.id });
     }
 
     // Generate tokens
@@ -481,7 +482,7 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error', { error });
     res.status(500).json({
       success: false,
       error: 'Login failed',
@@ -513,7 +514,7 @@ export const logout = async (req: AuthRequest, res: Response) => {
       message: 'Logged out successfully',
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error', { error });
     res.status(500).json({
       success: false,
       error: 'Logout failed',
@@ -560,7 +561,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       data: { user },
     });
   } catch (error) {
-    console.error('Get current user error:', error);
+    logger.error('Get current user error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user',
@@ -623,7 +624,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         // Invalidate ALL refresh tokens for this user as a security measure
         await query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
 
-        console.error(`[SECURITY ALERT] Refresh token reuse detected for user ${userId}`);
+        logger.error('Refresh token reuse detected', { userId, alert: 'SECURITY_ALERT' });
 
         return res.status(401).json({
           success: false,
@@ -712,7 +713,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       message: 'Tokens refreshed successfully',
     });
   } catch (error) {
-    console.error('Refresh token error:', error);
+    logger.error('Refresh token error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to refresh token',
@@ -775,7 +776,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       message: 'Email verified successfully. You can now log in.',
     });
   } catch (error) {
-    console.error('Email verification error:', error);
+    logger.error('Email verification error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify email',
@@ -843,7 +844,7 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
       message: 'Verification email sent. Please check your inbox.',
     });
   } catch (error) {
-    console.error('Resend verification error:', error);
+    logger.error('Resend verification error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to send verification email',
@@ -903,7 +904,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
       message: 'If that email is registered, a password reset link has been sent.',
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to process password reset request',
@@ -983,7 +984,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       message: 'Password reset successfully. You can now log in with your new password.',
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to reset password',
@@ -1088,7 +1089,7 @@ export const completeLoginWith2FA = async (req: Request, res: Response) => {
       try {
         await trustDevice(pool, user.id, req);
       } catch (error) {
-        console.error('Failed to trust device:', error);
+        logger.error('Failed to trust device', { error, userId: user.id });
       }
     }
 
@@ -1127,7 +1128,7 @@ export const completeLoginWith2FA = async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('2FA login completion error:', error);
+    logger.error('2FA login completion error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to complete login',
@@ -1216,7 +1217,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     try {
       await addPasswordToHistory(pool, req.user.userId, user.password_hash);
     } catch (error) {
-      console.error('Failed to add password to history:', error);
+      logger.error('Failed to add password to history', { error, userId: req.user.userId });
     }
 
     // Hash new password
@@ -1253,7 +1254,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
         : 'Password changed successfully',
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to change password',

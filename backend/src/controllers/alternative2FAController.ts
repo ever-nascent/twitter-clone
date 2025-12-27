@@ -14,6 +14,7 @@ import {
   formatPhoneNumber,
   isValidPhoneNumber,
 } from '../utils/alternative2FA';
+import { logger } from '../utils/logger';
 
 /**
  * Set up SMS 2FA
@@ -88,7 +89,7 @@ export const setupSMS2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('SMS 2FA setup error:', error);
+    logger.error('SMS 2FA setup error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to set up SMS 2FA',
@@ -175,7 +176,7 @@ export const sendSMS2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Send SMS 2FA error:', error);
+    logger.error('Send SMS 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to send SMS code',
@@ -228,7 +229,7 @@ export const verifySMS2FA = async (req: AuthRequest, res: Response) => {
       message: 'SMS code verified successfully',
     });
   } catch (error) {
-    console.error('Verify SMS 2FA error:', error);
+    logger.error('Verify SMS 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify SMS code',
@@ -296,7 +297,7 @@ export const disableSMS2FA = async (req: AuthRequest, res: Response) => {
       message: 'SMS 2FA disabled successfully',
     });
   } catch (error) {
-    console.error('Disable SMS 2FA error:', error);
+    logger.error('Disable SMS 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to disable SMS 2FA',
@@ -366,7 +367,7 @@ export const setupEmail2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Email 2FA setup error:', error);
+    logger.error('Email 2FA setup error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to set up Email 2FA',
@@ -453,7 +454,7 @@ export const sendEmail2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Send Email 2FA error:', error);
+    logger.error('Send Email 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to send email code',
@@ -506,7 +507,7 @@ export const verifyEmail2FA = async (req: AuthRequest, res: Response) => {
       message: 'Email code verified successfully',
     });
   } catch (error) {
-    console.error('Verify Email 2FA error:', error);
+    logger.error('Verify Email 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify email code',
@@ -573,7 +574,7 @@ export const disableEmail2FA = async (req: AuthRequest, res: Response) => {
       message: 'Email 2FA disabled successfully',
     });
   } catch (error) {
-    console.error('Disable Email 2FA error:', error);
+    logger.error('Disable Email 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to disable Email 2FA',
@@ -627,7 +628,7 @@ export const get2FAMethods = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get 2FA methods error:', error);
+    logger.error('Get 2FA methods error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get 2FA methods',

@@ -60,7 +60,7 @@ export const getLoginHistory = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get login history error:', error);
+    logger.error('Get login history error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get login history',
@@ -120,7 +120,7 @@ export const getSuspiciousLoginHistory = async (
       },
     });
   } catch (error) {
-    console.error('Get suspicious login history error:', error);
+    logger.error('Get suspicious login history error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get suspicious login history',
@@ -217,7 +217,7 @@ export const getLoginStats = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get login stats error:', error);
+    logger.error('Get login stats error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get login statistics',

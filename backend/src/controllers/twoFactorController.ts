@@ -9,6 +9,7 @@ import {
   formatBackupCodes,
   verifyBackupCode,
 } from '../utils/twoFactor';
+import { logger } from '../utils/logger';
 
 /**
  * Setup 2FA - Generate secret and QR code
@@ -70,7 +71,7 @@ export const setup2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('2FA setup error:', error);
+    logger.error('2FA setup error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to setup 2FA',
@@ -172,7 +173,7 @@ export const enable2FA = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Enable 2FA error:', error);
+    logger.error('Enable 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to enable 2FA',
@@ -260,7 +261,7 @@ export const disable2FA = async (req: AuthRequest, res: Response) => {
       message: '2FA disabled successfully',
     });
   } catch (error) {
-    console.error('Disable 2FA error:', error);
+    logger.error('Disable 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to disable 2FA',
@@ -323,7 +324,7 @@ export const verify2FA = async (req: AuthRequest, res: Response) => {
       message: '2FA verification successful',
     });
   } catch (error) {
-    console.error('Verify 2FA error:', error);
+    logger.error('Verify 2FA error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify 2FA code',
@@ -406,7 +407,7 @@ export const verifyBackupCodeLogin = async (req: AuthRequest, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('Verify backup code error:', error);
+    logger.error('Verify backup code error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to verify backup code',
@@ -496,7 +497,7 @@ export const regenerateBackupCodes = async (req: AuthRequest, res: Response) => 
       },
     });
   } catch (error) {
-    console.error('Regenerate backup codes error:', error);
+    logger.error('Regenerate backup codes error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to regenerate backup codes',
@@ -539,7 +540,7 @@ export const get2FAStatus = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    console.error('Get 2FA status error:', error);
+    logger.error('Get 2FA status error', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to get 2FA status',

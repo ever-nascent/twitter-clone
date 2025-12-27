@@ -65,7 +65,7 @@ export default function AdminPage() {
         actions.setStats(response.data.stats);
       }
     } catch (err) {
-      console.error('Failed to load stats:', err);
+      // Failed to load stats - will show error state
     }
   };
 
