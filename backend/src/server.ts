@@ -15,6 +15,7 @@ import alternative2FARoutes from './routes/alternative2FARoutes';
 import recoveryCodesRoutes from './routes/recoveryCodesRoutes';
 import trustedDevicesRoutes from './routes/trustedDevicesRoutes';
 import loginHistoryRoutes from './routes/loginHistoryRoutes';
+import statusRoutes from './routes/statusRoutes';
 import { generateCsrfToken, csrfErrorHandler } from './middleware/csrf';
 import { logger } from './utils/logger';
 
@@ -132,6 +133,7 @@ app.use('/api/v1/auth/trusted-devices', trustedDevicesRoutes);
 app.use('/api/v1/auth/login-history', loginHistoryRoutes);
 app.use('/api/v1/sessions', sessionRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/status', statusRoutes);
 
 // Backward compatibility: Redirect /api/auth and /api/admin to /api/v1
 // TODO: Remove these redirects in v2.0.0 (breaking change)
@@ -143,6 +145,7 @@ app.use('/api/auth/trusted-devices', trustedDevicesRoutes);
 app.use('/api/auth/login-history', loginHistoryRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/status', statusRoutes);
 
 // Health check endpoint
 // PRODUCTION: Used by K8s liveness/readiness probes, load balancers, monitoring systems

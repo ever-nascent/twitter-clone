@@ -15,6 +15,7 @@ import SecuritySettingsPage from './pages/SecuritySettingsPage';
 import SessionsPage from './pages/SessionsPage';
 import TrustedDevicesPage from './pages/TrustedDevicesPage';
 import LoginHistoryPage from './pages/LoginHistoryPage';
+import StatusPage from './pages/StatusPage';
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -181,6 +182,7 @@ function App() {
             </AdminRoute>
           }
         />
+        <Route path="/status" element={<StatusPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
